@@ -126,6 +126,8 @@
                 index +
                 '" data-fullpath="' +
                 escapeHtml(job.fullDisplayName) +
+                '" data-folder="' +
+                job.folder +
                 '"/></td>' +
                 "<td>" +
                 escapeHtml(job.name) +
@@ -194,7 +196,9 @@
 
             var selectedJobs = [];
             checked.forEach(function (cb) {
-                selectedJobs.push(cb.getAttribute("data-fullpath"));
+                var fullPath = cb.getAttribute("data-fullpath");
+                var isFolder = cb.getAttribute("data-folder") === "true";
+                selectedJobs.push(fullPath + "|" + isFolder);
             });
 
             var forceUpdate = document.querySelector('input[name="updateMode"]:checked').value === "force";
@@ -212,7 +216,10 @@
 
         var jobListHtml = "<ul class='jp-job-list'>";
         selectedJobs.forEach(function (job) {
-            jobListHtml += "<li>" + escapeHtml(job) + "</li>";
+            var displayName = job.split("|")[0];
+            var isFolder = job.split("|")[1] === "true";
+            var typeIcon = isFolder ? "📁 " : "📄 ";
+            jobListHtml += "<li>" + typeIcon + escapeHtml(displayName) + "</li>";
         });
         jobListHtml += "</ul>";
 

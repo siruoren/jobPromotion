@@ -25,9 +25,12 @@ import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,6 +56,12 @@ public class PromotionService {
         return client.listJobs(folderPath);
     }
 
+    /**
+     * Promote jobs with folder awareness.
+     * Each entry in jobFullPaths is "fullPath|isFolder" format.
+     * - If a folder is selected, create the folder under the target group
+     * - If only a job is selected (without its parent folder), create missing parent folders and promote the job
+     */
     public Map<String, PromotionResult> promoteJobs(
             @NonNull List<String> jobFullPaths,
             @NonNull ModifiableTopLevelItemGroup targetGroup,
@@ -80,16 +89,103 @@ public class PromotionService {
                 url.trim(), credentials.getUsername(), credentials.getPassword().getPlainText()
         );
 
-        for (String fullPath : jobFullPaths) {
+        // Collect all folders that need to be created first
+        Set<String> foldersToCreate = new LinkedHashSet<>();
+        // Parse job entries
+        List<JobEntry> entries = new ArrayList<>();
+        for (String entry : jobFullPaths) {
+            String[] parts = entry.split("\\|");
+            String fullPath = parts[0].trim();
+            boolean isFolder = parts.length > 1 && "true".equalsIgnoreCase(parts[1].trim());
+            entries.add(new JobEntry(fullPath, isFolder));
+
+            if (isFolder) {
+                // When a folder is selected, add it to folder creation list
+                foldersToCreate.add(fullPath);
+            } else {
+                // For jobs, add parent paths to folder creation list
+                String parentPath = getParentPath(fullPath);
+                if (parentPath != null && !parentPath.isEmpty()) {
+                    addParentFolders(foldersToCreate, parentPath);
+                }
+            }
+        }
+
+        // Create all needed folders first
+        for (String folderPath : foldersToCreate) {
             try {
-                PromotionResult result = promoteSingleJob(client, fullPath, targetGroup, forceUpdate);
-                results.put(fullPath, result);
+                ensureFolderExists(targetGroup, folderPath);
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Failed to promote job: " + fullPath, e);
-                results.put(fullPath, PromotionResult.failure(fullPath, e.getMessage()));
+                LOGGER.log(Level.WARNING, "Failed to create folder: " + folderPath, e);
+            }
+        }
+
+        // Now promote each entry
+        for (JobEntry entry : entries) {
+            try {
+                PromotionResult result;
+                if (entry.isFolder) {
+                    // Folder: just ensure the folder exists (already created above)
+                    result = ensureFolderExists(targetGroup, entry.fullPath);
+                } else {
+                    // Job: promote the job config
+                    result = promoteSingleJob(client, entry.fullPath, targetGroup, forceUpdate);
+                }
+                results.put(entry.fullPath, result);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Failed to promote: " + entry.fullPath, e);
+                results.put(entry.fullPath, PromotionResult.failure(entry.fullPath, e.getMessage()));
             }
         }
         return results;
+    }
+
+    private void addParentFolders(Set<String> folders, String path) {
+        String[] parts = path.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append("/");
+            sb.append(parts[i]);
+            folders.add(sb.toString());
+        }
+    }
+
+    private String getParentPath(String fullPath) {
+        if (fullPath == null || !fullPath.contains("/")) {
+            return null;
+        }
+        return fullPath.substring(0, fullPath.lastIndexOf("/"));
+    }
+
+    private PromotionResult ensureFolderExists(ModifiableTopLevelItemGroup rootTarget, String folderPath) {
+        String[] parts = folderPath.split("/");
+        ModifiableTopLevelItemGroup current = rootTarget;
+
+        for (String folderName : parts) {
+            Item item = current.getItem(folderName);
+            if (item instanceof Folder) {
+                current = (Folder) item;
+            } else if (item instanceof ModifiableTopLevelItemGroup) {
+                current = (ModifiableTopLevelItemGroup) item;
+            } else {
+                try {
+                    if (current instanceof Folder currentFolder) {
+                        TopLevelItem created = currentFolder.createProject(Folder.class, folderName);
+                        if (created instanceof Folder) {
+                            current = (Folder) created;
+                        }
+                    } else if (current instanceof Jenkins jenkins) {
+                        TopLevelItem created = jenkins.createProject(Folder.class, folderName);
+                        if (created instanceof Folder) {
+                            current = (Folder) created;
+                        }
+                    }
+                } catch (Exception e) {
+                    return PromotionResult.failure(folderPath, "Failed to create folder: " + e.getMessage());
+                }
+            }
+        }
+        return PromotionResult.success(folderPath, Messages.PromotionService_folderCreated());
     }
 
     private PromotionResult promoteSingleJob(
@@ -273,6 +369,16 @@ public class PromotionService {
             }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to disable job: " + job.getFullName(), e);
+        }
+    }
+
+    private static class JobEntry {
+        final String fullPath;
+        final boolean isFolder;
+
+        JobEntry(String fullPath, boolean isFolder) {
+            this.fullPath = fullPath;
+            this.isFolder = isFolder;
         }
     }
 }
