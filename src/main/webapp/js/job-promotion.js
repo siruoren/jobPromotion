@@ -19,6 +19,19 @@
         return { success: false, error: "Unexpected response format: " + trimmed.substring(0, 200) };
     }
 
+    function getMessage(key) {
+        var element = document.getElementById("msg-" + key);
+        if (element) {
+            return element.textContent || element.innerText || key;
+        }
+        return key;
+    }
+
+    function isFolderPage() {
+        var input = document.getElementById("folderPathInput");
+        return input && input.readOnly;
+    }
+
     function getCrumbHeader() {
         var meta = document.querySelector('meta[name="crumbHeader"]');
         if (meta) {
@@ -75,13 +88,17 @@
 
     if (loadJobsBtn) {
         loadJobsBtn.addEventListener("click", function () {
-            var folderPath = document.getElementById("folderPathInput").value.trim();
             loadJobsBtn.disabled = true;
             var originalText = loadJobsBtn.getAttribute("data-original-text") || loadJobsBtn.textContent;
-            loadJobsBtn.textContent = "Loading...";
+            loadJobsBtn.textContent = getMessage("loading") || "Loading...";
 
             var formData = new FormData();
-            formData.append("folderPath", folderPath);
+            // For folder pages, don't send folderPath - backend uses current folder
+            // For root page, send the folderPath input value
+            if (!isFolderPage()) {
+                var folderPath = document.getElementById("folderPathInput").value.trim();
+                formData.append("folderPath", folderPath);
+            }
 
             var headers = buildHeaders();
 
@@ -117,9 +134,12 @@
 
     function renderJobList(jobs) {
         jobTableBody.innerHTML = "";
+        var folderLabel = getMessage("folder") || "Folder";
+        var jobLabel = getMessage("job") || "Job";
+
         jobs.forEach(function (job, index) {
             var tr = document.createElement("tr");
-            var typeLabel = job.folder ? "Folder" : "Job";
+            var typeLabel = job.folder ? folderLabel : jobLabel;
 
             tr.innerHTML =
                 '<td><input type="checkbox" class="job-checkbox" data-index="' +
@@ -190,7 +210,7 @@
         promoteBtn.addEventListener("click", function () {
             var checked = document.querySelectorAll(".job-checkbox:checked");
             if (checked.length === 0) {
-                alert("Please select at least one job to promote");
+                alert(getMessage("noJobsSelected") || "Please select at least one job to promote");
                 return;
             }
 
@@ -224,15 +244,15 @@
         jobListHtml += "</ul>";
 
         dialog.innerHTML =
-            "<h2>Confirm Promotion</h2>" +
-            "<p>The following jobs will be promoted:</p>" +
+            "<h2>" + getMessage("confirm-title") + "</h2>" +
+            "<p>" + getMessage("confirm-desc") + "</p>" +
             jobListHtml +
-            "<p>Mode: " +
-            (forceUpdate ? "Force Update" : "Normal Update") +
+            "<p>" + getMessage("mode-label") + " " +
+            (forceUpdate ? getMessage("force-update") : getMessage("normal-update")) +
             "</p>" +
             "<div class='jp-dialog-actions'>" +
-            "<button class='jenkins-button jenkins-button--primary' id='confirmPromoteBtn'>Confirm Promote</button>" +
-            "<button class='jenkins-button' id='cancelPromoteBtn'>Cancel</button>" +
+            "<button class='jenkins-button jenkins-button--primary' id='confirmPromoteBtn'>" + getMessage("confirm-btn") + "</button>" +
+            "<button class='jenkins-button' id='cancelPromoteBtn'>" + getMessage("cancel-btn") + "</button>" +
             "</div>";
 
         overlay.appendChild(dialog);
@@ -257,7 +277,7 @@
     function executePromotion(selectedJobs, forceUpdate) {
         promoteBtn.disabled = true;
         var originalText = promoteBtn.getAttribute("data-original-text") || promoteBtn.textContent;
-        promoteBtn.textContent = "Promoting...";
+        promoteBtn.textContent = getMessage("loading") || "Promoting...";
 
         var formData = new FormData();
         formData.append("jobs", selectedJobs.join(","));
@@ -302,9 +322,17 @@
         var dialog = document.createElement("div");
         dialog.className = "jp-dialog jp-dialog-result";
 
-        var resultHtml = "<table class='jenkins-table'><thead><tr><th>Job</th><th>Status</th><th>Message</th></tr></thead><tbody>";
+        var resultHtml = "<table class='jenkins-table'><thead><tr><th>" + getMessage("result-job") + "</th><th>" + getMessage("result-status") + "</th><th>" + getMessage("result-message") + "</th></tr></thead><tbody>";
         results.forEach(function (r) {
             var statusClass = "jp-status-" + r.status.toLowerCase();
+            var statusText = r.status;
+            if (r.status === "SUCCESS") {
+                statusText = getMessage("success");
+            } else if (r.status === "SKIPPED") {
+                statusText = getMessage("skipped");
+            } else if (r.status === "FAILURE") {
+                statusText = getMessage("failure");
+            }
             resultHtml +=
                 "<tr>" +
                 "<td>" +
@@ -313,7 +341,7 @@
                 "<td class='" +
                 statusClass +
                 "'>" +
-                r.status +
+                statusText +
                 "</td>" +
                 "<td>" +
                 escapeHtml(r.message || "") +
@@ -323,10 +351,10 @@
         resultHtml += "</tbody></table>";
 
         dialog.innerHTML =
-            "<h2>Promotion Results</h2>" +
+            "<h2>" + getMessage("result-title") + "</h2>" +
             resultHtml +
             "<div class='jp-dialog-actions'>" +
-            "<button class='jenkins-button jenkins-button--primary' id='closeResultBtn'>Close</button>" +
+            "<button class='jenkins-button jenkins-button--primary' id='closeResultBtn'>" + getMessage("close-btn") + "</button>" +
             "</div>";
 
         overlay.appendChild(dialog);

@@ -10,12 +10,9 @@
                         <div class="jenkins-section-header">
                             <h2>${%sourceJobs}</h2>
                         </div>
-                        <div class="jenkins-form-row">
-                            <label for="folderPathInput">${%folderPath}</label>
-                            <div class="jenkins-input-area">
-                                <input type="text" id="folderPathInput" name="folderPath" value="${it.folder.fullName}" placeholder="${%folderPathPlaceholder}" class="jenkins-input"/>
-                                <button id="loadJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadJobs}">${%loadJobs}</button>
-                            </div>
+                        <div class="jenkins-form-row" style="display:flex;align-items:center;gap:8px;">
+                            <input type="text" id="folderPathInput" name="folderPath" value="${it.folder.fullName}" readonly="readonly" class="jenkins-input" style="flex:1;"/>
+                            <button id="loadJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadJobs}">${%loadJobs}</button>
                         </div>
                     </div>
                 </div>
@@ -67,6 +64,28 @@
                             <button id="promoteBtn" class="jenkins-button jenkins-button--primary jenkins-button--large" data-original-text="${%promote}">${%promote}</button>
                         </div>
                     </div>
+                </div>
+
+                <div id="i18n-messages" style="display:none;">
+                    <span id="msg-confirm-title">${%confirmTitle}</span>
+                    <span id="msg-confirm-desc">${%confirmDesc}</span>
+                    <span id="msg-mode-label">${%modeLabel}</span>
+                    <span id="msg-force-update">${%forceUpdate}</span>
+                    <span id="msg-normal-update">${%normalUpdate}</span>
+                    <span id="msg-confirm-btn">${%confirmPromote}</span>
+                    <span id="msg-cancel-btn">${%cancel}</span>
+                    <span id="msg-result-title">${%resultTitle}</span>
+                    <span id="msg-result-job">${%job}</span>
+                    <span id="msg-result-status">${%status}</span>
+                    <span id="msg-result-message">${%message}</span>
+                    <span id="msg-success">${%success}</span>
+                    <span id="msg-skipped">${%skipped}</span>
+                    <span id="msg-failure">${%failure}</span>
+                    <span id="msg-close-btn">${%close}</span>
+                    <span id="msg-loading">${%loading}</span>
+                    <span id="msg-noJobsSelected">${%noJobsSelected}</span>
+                    <span id="msg-folder">${%folder}</span>
+                    <span id="msg-job">${%job}</span>
                 </div>
             </div>
 

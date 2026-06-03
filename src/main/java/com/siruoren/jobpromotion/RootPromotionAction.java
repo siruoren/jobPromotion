@@ -25,7 +25,11 @@ public class RootPromotionAction implements RootAction {
 
     @Override
     public String getIconFileName() {
-        return "symbol-copy";
+        // Only show menu for administrators
+        if (Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+            return "16x16/blue.png";
+        }
+        return null;
     }
 
     @Override
@@ -35,7 +39,11 @@ public class RootPromotionAction implements RootAction {
 
     @Override
     public String getUrlName() {
-        return "job-promotion";
+        // Only allow access for administrators
+        if (Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+            return "job-promotion";
+        }
+        return null;
     }
 
     @RequirePOST

@@ -5,7 +5,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Action;
 import hudson.model.Item;
 import org.kohsuke.stapler.HttpResponse;
-import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
@@ -30,7 +29,11 @@ public class FolderPromotionAction implements Action {
 
     @Override
     public String getIconFileName() {
-        return "symbol-copy";
+        // Only show menu if user has CREATE and CONFIGURE permission on this folder
+        if (folder.hasPermission(Item.CREATE) && folder.hasPermission(Item.CONFIGURE)) {
+            return "16x16/blue.png";
+        }
+        return null;
     }
 
     @Override
@@ -40,16 +43,32 @@ public class FolderPromotionAction implements Action {
 
     @Override
     public String getUrlName() {
-        return "job-promotion";
+        // Only allow access if user has permission
+        if (folder.hasPermission(Item.CREATE) && folder.hasPermission(Item.CONFIGURE)) {
+            return "job-promotion";
+        }
+        return null;
     }
 
     public Folder getFolder() {
         return folder;
     }
 
+    /**
+     * Returns the fixed folder path for this action - always the current folder's full name.
+     * This ensures only jobs from the same directory path on source Jenkins are shown.
+     */
+    public String getFixedFolderPath() {
+        return folder.getFullName();
+    }
+
     @RequirePOST
-    public HttpResponse doListRemoteJobs(@QueryParameter("folderPath") String folderPath) throws IOException, ServletException {
+    public HttpResponse doListRemoteJobs() throws IOException, ServletException {
+        folder.checkPermission(Item.CREATE);
         folder.checkPermission(Item.CONFIGURE);
+
+        // Always use the current folder's full name as the source path
+        String folderPath = folder.getFullName();
 
         try {
             PromotionService service = new PromotionService();
@@ -63,6 +82,7 @@ public class FolderPromotionAction implements Action {
 
     @RequirePOST
     public HttpResponse doPromoteJobs(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.CREATE);
         folder.checkPermission(Item.CONFIGURE);
 
         String jobsParam = req.getParameter("jobs");
