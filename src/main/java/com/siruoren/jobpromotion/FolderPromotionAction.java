@@ -30,7 +30,7 @@ public class FolderPromotionAction implements Action {
 
     @Override
     public String getIconFileName() {
-        return "symbol-promote plugin-job-promotion";
+        return "symbol-copy";
     }
 
     @Override
@@ -87,7 +87,7 @@ public class FolderPromotionAction implements Action {
 
         PromotionService service = new PromotionService();
         Future<Map<String, PromotionResult>> future = PromotionThreadPool.getInstance().submitWithAuth(() -> {
-            return service.promoteJobs(jobFullPaths, folder, forceUpdate);
+            return service.promoteJobs(jobFullPaths, folder, forceUpdate, folder.getFullName());
         });
 
         try {

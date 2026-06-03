@@ -25,7 +25,7 @@ public class RootPromotionAction implements RootAction {
 
     @Override
     public String getIconFileName() {
-        return "symbol-promote plugin-job-promotion";
+        return "symbol-copy";
     }
 
     @Override
@@ -78,7 +78,7 @@ public class RootPromotionAction implements RootAction {
 
         PromotionService service = new PromotionService();
         Future<Map<String, PromotionResult>> future = PromotionThreadPool.getInstance().submitWithAuth(() -> {
-            return service.promoteJobs(jobFullPaths, Jenkins.get(), forceUpdate);
+            return service.promoteJobs(jobFullPaths, Jenkins.get(), forceUpdate, null);
         });
 
         try {
