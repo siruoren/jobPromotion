@@ -27,7 +27,7 @@ public class RootPromotionAction implements RootAction {
     public String getIconFileName() {
         // Only show menu for administrators
         if (Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
-            return "16x16/blue.png";
+            return "symbol-promote plugin-job-promotion";
         }
         return null;
     }

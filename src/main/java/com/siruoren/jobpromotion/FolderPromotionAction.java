@@ -31,7 +31,7 @@ public class FolderPromotionAction implements Action {
     public String getIconFileName() {
         // Only show menu if user has CREATE and CONFIGURE permission on this folder
         if (folder.hasPermission(Item.CREATE) && folder.hasPermission(Item.CONFIGURE)) {
-            return "16x16/blue.png";
+            return "symbol-promote plugin-job-promotion";
         }
         return null;
     }
