@@ -1,0 +1,102 @@
+#job-promotion-container {
+    max-width: 1200px;
+}
+
+#job-promotion-container .jenkins-form-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+#job-promotion-container .jenkins-input {
+    flex: 1;
+    min-width: 300px;
+}
+
+#job-promotion-container .jenkins-form-description {
+    color: var(--text-color-secondary, #666);
+    font-size: 0.9em;
+    margin-top: 4px;
+    margin-left: 20px;
+}
+
+.jp-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.jp-dialog {
+    background: var(--background, #fff);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.jp-dialog h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border, #ddd);
+}
+
+.jp-dialog-result {
+    max-width: 900px;
+}
+
+.jp-job-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 4px;
+    padding: 8px;
+    margin: 12px 0;
+}
+
+.jp-job-list li {
+    padding: 4px 0;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.jp-dialog-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border, #ddd);
+}
+
+.jp-status-success {
+    color: var(--green, #4caf50);
+    font-weight: bold;
+}
+
+.jp-status-failure {
+    color: var(--red, #f44336);
+    font-weight: bold;
+}
+
+.jp-status-skipped {
+    color: var(--yellow, #ff9800);
+    font-weight: bold;
+}
+
+.jenkins-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}

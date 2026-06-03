@@ -1,0 +1,77 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <l:layout title="${%pageTitle}">
+        <l:main-panel>
+            <h1>${%pageTitle}</h1>
+
+            <div id="job-promotion-container">
+                <div class="jenkins-form-section">
+                    <div class="jenkins-form-item">
+                        <div class="jenkins-section-header">
+                            <h2>${%sourceJobs}</h2>
+                        </div>
+                        <div class="jenkins-form-row">
+                            <label for="folderPathInput">${%folderPath}</label>
+                            <div class="jenkins-input-area">
+                                <input type="text" id="folderPathInput" name="folderPath" value="" placeholder="${%folderPathPlaceholder}" class="jenkins-input"/>
+                                <button id="loadJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadJobs}">${%loadJobs}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="jobListSection" style="display:none;">
+                    <div class="jenkins-section-header">
+                        <h2>${%selectJobs}</h2>
+                        <div class="jenkins-toolbar">
+                            <button id="selectAllBtn" class="jenkins-button">${%selectAll}</button>
+                            <button id="deselectAllBtn" class="jenkins-button">${%deselectAll}</button>
+                        </div>
+                    </div>
+                    <div id="jobListContainer" class="jenkins-table-wrap">
+                        <table class="jenkins-table" id="jobTable">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="headerCheckbox"/></th>
+                                    <th>${%jobName}</th>
+                                    <th>${%jobPath}</th>
+                                    <th>${%jobType}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="promotionOptions" style="display:none;">
+                    <div class="jenkins-form-section">
+                        <div class="jenkins-section-header">
+                            <h2>${%promotionOptions}</h2>
+                        </div>
+                        <div class="jenkins-form-item">
+                            <label>
+                                <input type="radio" name="updateMode" value="normal" checked="checked"/>
+                                ${%normalUpdate}
+                            </label>
+                            <div class="jenkins-form-description">${%normalUpdateDesc}</div>
+                        </div>
+                        <div class="jenkins-form-item">
+                            <label>
+                                <input type="radio" name="updateMode" value="force"/>
+                                ${%forceUpdate}
+                            </label>
+                            <div class="jenkins-form-description">${%forceUpdateDesc}</div>
+                        </div>
+                        <div class="jenkins-form-item">
+                            <button id="promoteBtn" class="jenkins-button jenkins-button--primary jenkins-button--large" data-original-text="${%promote}">${%promote}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <link rel="stylesheet" href="${rootURL}/plugin/job-promotion/css/job-promotion.css"/>
+            <script src="${rootURL}/plugin/job-promotion/js/job-promotion.js"></script>
+        </l:main-panel>
+    </l:layout>
+</j:jelly>

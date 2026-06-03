@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    Jenkins job promotion plugin - promote jobs from source Jenkins instance with idempotent sync, auto cleanup and disable.
+</div>

@@ -1,0 +1,18 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:section title="${%globalConfig.title}">
+        <f:entry title="${%globalConfig.sourceJenkinsUrl}" description="${%globalConfig.sourceJenkinsUrlDesc}">
+            <f:textbox name="sourceJenkinsUrl" value="${instance.sourceJenkinsUrl}"/>
+        </f:entry>
+
+        <f:entry title="${%globalConfig.credentialsId}" description="${%globalConfig.credentialsIdDesc}">
+            <f:select name="credentialsId" value="${instance.credentialsId}"/>
+        </f:entry>
+
+        <f:validateButton
+            title="${%globalConfig.testConnection}"
+            progress="${%globalConfig.testing}"
+            method="testConnection"
+            with="sourceJenkinsUrl,credentialsId"/>
+    </f:section>
+</j:jelly>
