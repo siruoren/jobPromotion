@@ -6,11 +6,13 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.interceptor.RequirePOST;
@@ -67,9 +69,10 @@ public class JobPromotionGlobalConfig extends GlobalConfiguration {
         return GlobalConfiguration.all().getInstance(JobPromotionGlobalConfig.class);
     }
 
-    public ListBoxModel doFillCredentialsIdItems() {
+    public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item,
+                                                  @QueryParameter String credentialsId) {
         Jenkins jenkins = Jenkins.get();
-        if (!jenkins.hasPermission(Jenkins.ADMINISTER)) {
+        if (jenkins == null || !jenkins.hasPermission(Jenkins.ADMINISTER)) {
             return new ListBoxModel();
         }
         List<StandardUsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(
