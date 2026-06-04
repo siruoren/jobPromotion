@@ -66,7 +66,7 @@ public class FolderPromotionAction implements Action {
 
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
         net.sf.json.JSONArray arr = new net.sf.json.JSONArray();
-        for (JobPromotionGlobalConfig.SourceJenkinsInstance inst : config.getInstances()) {
+        for (SourceJenkinsInstance inst : config.getInstances()) {
             net.sf.json.JSONObject obj = new net.sf.json.JSONObject();
             obj.put("name", inst.getName() != null ? inst.getName() : "");
             obj.put("url", inst.getUrl() != null ? inst.getUrl() : "");

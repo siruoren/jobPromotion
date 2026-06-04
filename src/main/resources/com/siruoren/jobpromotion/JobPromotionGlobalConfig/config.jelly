@@ -1,31 +1,9 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
     <f:section title="${%globalConfig.title}">
 
-        <f:entry title="${%globalConfig.instances}">
-            <f:repeatable var="instance" items="${descriptor.instances}" add="${%globalConfig.addInstance}">
-                <table width="100%">
-                    <f:entry title="${%globalConfig.instanceName}" field="name">
-                        <f:textbox value="${instance.name}"/>
-                    </f:entry>
-                    <f:entry title="${%globalConfig.sourceJenkinsUrl}" description="${%globalConfig.sourceJenkinsUrlDesc}" field="url">
-                        <f:textbox value="${instance.url}"/>
-                    </f:entry>
-                    <f:entry title="${%globalConfig.credentialsId}" description="${%globalConfig.credentialsIdDesc}" field="credentialsId">
-                        <c:select/>
-                    </f:entry>
-                    <f:validateButton
-                        title="${%globalConfig.testConnection}"
-                        progress="${%globalConfig.testing}"
-                        method="testConnection"
-                        with="url,credentialsId"/>
-                    <f:entry title="">
-                        <div align="right">
-                            <f:repeatableDeleteButton value="${%globalConfig.deleteInstance}"/>
-                        </div>
-                    </f:entry>
-                </table>
-            </f:repeatable>
+        <f:entry title="${%globalConfig.instances}" field="instances">
+            <f:repeatableProperty field="instances" add="${%globalConfig.addInstance}"/>
         </f:entry>
 
         <f:entry title="${%globalConfig.auditLogRetentionDays}" description="${%globalConfig.auditLogRetentionDaysDesc}" field="auditLogRetentionDays">

@@ -55,7 +55,7 @@ public class RootPromotionAction implements RootAction {
 
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
         JSONArray arr = new JSONArray();
-        for (JobPromotionGlobalConfig.SourceJenkinsInstance inst : config.getInstances()) {
+        for (SourceJenkinsInstance inst : config.getInstances()) {
             JSONObject obj = new JSONObject();
             obj.put("name", inst.getName() != null ? inst.getName() : "");
             obj.put("url", inst.getUrl() != null ? inst.getUrl() : "");

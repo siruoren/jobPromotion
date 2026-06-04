@@ -45,7 +45,7 @@ public class PromotionService {
 
     public List<RemoteJobInfo> fetchRemoteJobs(String folderPath, String sourceInstanceName) throws Exception {
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
-        JobPromotionGlobalConfig.SourceJenkinsInstance instance = config.getInstanceByName(sourceInstanceName);
+        SourceJenkinsInstance instance = config.getInstanceByName(sourceInstanceName);
         if (instance == null) {
             throw new IllegalStateException(Messages.PromotionService_sourceNotConfigured());
         }
@@ -90,7 +90,7 @@ public class PromotionService {
 
         Map<String, PromotionResult> results = new HashMap<>();
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
-        JobPromotionGlobalConfig.SourceJenkinsInstance instance = config.getInstanceByName(sourceInstanceName);
+        SourceJenkinsInstance instance = config.getInstanceByName(sourceInstanceName);
         if (instance == null) {
             for (String path : jobFullPaths) {
                 results.put(path, PromotionResult.failure(path, Messages.PromotionService_sourceNotConfigured()));
