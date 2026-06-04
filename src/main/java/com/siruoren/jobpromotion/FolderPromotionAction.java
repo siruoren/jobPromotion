@@ -5,6 +5,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Action;
 import hudson.model.Item;
 import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
@@ -29,7 +30,6 @@ public class FolderPromotionAction implements Action {
 
     @Override
     public String getIconFileName() {
-        // Only show menu if user has CREATE and CONFIGURE permission on this folder
         if (folder.hasPermission(Item.CREATE) && folder.hasPermission(Item.CONFIGURE)) {
             return "symbol-promote plugin-job-promotion";
         }
@@ -43,7 +43,6 @@ public class FolderPromotionAction implements Action {
 
     @Override
     public String getUrlName() {
-        // Only allow access if user has permission
         if (folder.hasPermission(Item.CREATE) && folder.hasPermission(Item.CONFIGURE)) {
             return "job-promotion";
         }
@@ -54,25 +53,38 @@ public class FolderPromotionAction implements Action {
         return folder;
     }
 
-    /**
-     * Returns the fixed folder path for this action - always the current folder's full name.
-     * This ensures only jobs from the same directory path on source Jenkins are shown.
-     */
     public String getFixedFolderPath() {
         return folder.getFullName();
     }
 
+    /**
+     * Return the list of configured source Jenkins instances for the frontend dropdown.
+     */
     @RequirePOST
-    public HttpResponse doListRemoteJobs() throws IOException, ServletException {
+    public HttpResponse doGetInstances() throws IOException, ServletException {
+        folder.checkPermission(Item.CREATE);
+
+        JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
+        net.sf.json.JSONArray arr = new net.sf.json.JSONArray();
+        for (JobPromotionGlobalConfig.SourceJenkinsInstance inst : config.getInstances()) {
+            net.sf.json.JSONObject obj = new net.sf.json.JSONObject();
+            obj.put("name", inst.getName() != null ? inst.getName() : "");
+            obj.put("url", inst.getUrl() != null ? inst.getUrl() : "");
+            arr.add(obj);
+        }
+        return new JsonResponse(arr);
+    }
+
+    @RequirePOST
+    public HttpResponse doListRemoteJobs(@QueryParameter("sourceInstance") String sourceInstance) throws IOException, ServletException {
         folder.checkPermission(Item.CREATE);
         folder.checkPermission(Item.CONFIGURE);
 
-        // Always use the current folder's full name as the source path
         String folderPath = folder.getFullName();
 
         try {
             PromotionService service = new PromotionService();
-            List<RemoteJobInfo> jobs = service.fetchRemoteJobs(folderPath);
+            List<RemoteJobInfo> jobs = service.fetchRemoteJobs(folderPath, sourceInstance);
             return new JsonResponse(jobs);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to list remote jobs for folder: " + folder.getFullName(), e);
@@ -87,6 +99,7 @@ public class FolderPromotionAction implements Action {
 
         String jobsParam = req.getParameter("jobs");
         boolean forceUpdate = "true".equals(req.getParameter("forceUpdate"));
+        String sourceInstance = req.getParameter("sourceInstance");
 
         if (jobsParam == null || jobsParam.trim().isEmpty()) {
             return new JsonResponseerror(Messages.FolderPromotionAction_noJobsSelected());
@@ -107,7 +120,11 @@ public class FolderPromotionAction implements Action {
 
         PromotionService service = new PromotionService();
         Future<Map<String, PromotionResult>> future = PromotionThreadPool.getInstance().submitWithAuth(() -> {
-            return service.promoteJobs(jobFullPaths, folder, forceUpdate, folder.getFullName());
+            Map<String, PromotionResult> results = service.promoteJobs(jobFullPaths, folder, forceUpdate, folder.getFullName(), sourceInstance);
+            // Log audit
+            String username = jenkins.model.Jenkins.getAuthentication2().getName();
+            AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results);
+            return results;
         });
 
         try {

@@ -32,25 +32,21 @@
         return input && input.readOnly;
     }
 
+    function isRootPage() {
+        return !isFolderPage();
+    }
+
     function getCrumbHeader() {
         var meta = document.querySelector('meta[name="crumbHeader"]');
-        if (meta) {
-            return meta.getAttribute("content");
-        }
-        if (typeof crumb !== "undefined" && crumb.headerName) {
-            return crumb.headerName;
-        }
+        if (meta) return meta.getAttribute("content");
+        if (typeof crumb !== "undefined" && crumb.headerName) return crumb.headerName;
         return "Jenkins-Crumb";
     }
 
     function getCrumbValue() {
         var meta = document.querySelector('meta[name="crumb"]');
-        if (meta) {
-            return meta.getAttribute("content");
-        }
-        if (typeof crumb !== "undefined" && crumb.value) {
-            return crumb.value;
-        }
+        if (meta) return meta.getAttribute("content");
+        if (typeof crumb !== "undefined" && crumb.value) return crumb.value;
         return "";
     }
 
@@ -79,25 +75,62 @@
     var promoteBtn = document.getElementById("promoteBtn");
     var selectAllBtn = document.getElementById("selectAllBtn");
     var deselectAllBtn = document.getElementById("deselectAllBtn");
+    var auditLogBtn = document.getElementById("auditLogBtn");
     var jobListSection = document.getElementById("jobListSection");
     var promotionOptions = document.getElementById("promotionOptions");
     var jobTableBody = document.getElementById("jobTableBody");
     var headerCheckbox = document.getElementById("headerCheckbox");
+    var sourceInstanceSelect = document.getElementById("sourceInstanceSelect");
 
     var remoteJobs = [];
+    var auditLogPage = 1;
+    var auditLogPageSize = 20;
+
+    // Load source instances on page load
+    function loadInstances() {
+        var headers = buildHeaders();
+        fetch(actionUrl + "/getInstances", {
+            method: "POST",
+            headers: headers,
+            credentials: "same-origin",
+        })
+            .then(function (response) { return response.text(); })
+            .then(function (text) {
+                var result = safeParseJson(text);
+                if (result.success && Array.isArray(result.data)) {
+                    if (sourceInstanceSelect) {
+                        sourceInstanceSelect.innerHTML = '<option value="">' + getMessage("selectInstance") + '</option>';
+                        result.data.forEach(function (inst) {
+                            var option = document.createElement("option");
+                            option.value = inst.name || inst.url;
+                            option.textContent = inst.name ? (inst.name + " (" + inst.url + ")") : inst.url;
+                            sourceInstanceSelect.appendChild(option);
+                        });
+                    }
+                }
+            })
+            .catch(function (err) {
+                // Silently fail - instances may not be configured yet
+            });
+    }
+
+    loadInstances();
 
     if (loadJobsBtn) {
         loadJobsBtn.addEventListener("click", function () {
+            var sourceInstance = sourceInstanceSelect ? sourceInstanceSelect.value : "";
+
             loadJobsBtn.disabled = true;
             var originalText = loadJobsBtn.getAttribute("data-original-text") || loadJobsBtn.textContent;
             loadJobsBtn.textContent = getMessage("loading") || "Loading...";
 
             var formData = new FormData();
-            // For folder pages, don't send folderPath - backend uses current folder
-            // For root page, send the folderPath input value
             if (!isFolderPage()) {
                 var folderPath = document.getElementById("folderPathInput").value.trim();
                 formData.append("folderPath", folderPath);
+            }
+            if (sourceInstance) {
+                formData.append("sourceInstance", sourceInstance);
             }
 
             var headers = buildHeaders();
@@ -108,9 +141,7 @@
                 body: formData,
                 credentials: "same-origin",
             })
-                .then(function (response) {
-                    return response.text();
-                })
+                .then(function (response) { return response.text(); })
                 .then(function (text) {
                     var result = safeParseJson(text);
                     if (result.success && Array.isArray(result.data)) {
@@ -189,9 +220,7 @@
     if (selectAllBtn) {
         selectAllBtn.addEventListener("click", function () {
             var checkboxes = document.querySelectorAll(".job-checkbox");
-            checkboxes.forEach(function (cb) {
-                cb.checked = true;
-            });
+            checkboxes.forEach(function (cb) { cb.checked = true; });
             if (headerCheckbox) headerCheckbox.checked = true;
         });
     }
@@ -199,9 +228,7 @@
     if (deselectAllBtn) {
         deselectAllBtn.addEventListener("click", function () {
             var checkboxes = document.querySelectorAll(".job-checkbox");
-            checkboxes.forEach(function (cb) {
-                cb.checked = false;
-            });
+            checkboxes.forEach(function (cb) { cb.checked = false; });
             if (headerCheckbox) headerCheckbox.checked = false;
         });
     }
@@ -238,7 +265,7 @@
         selectedJobs.forEach(function (job) {
             var displayName = job.split("|")[0];
             var isFolder = job.split("|")[1] === "true";
-            var typeIcon = isFolder ? "📁 " : "📄 ";
+            var typeIcon = isFolder ? "\uD83D\uDCC1 " : "\uD83D\uDCC4 ";
             jobListHtml += "<li>" + typeIcon + escapeHtml(displayName) + "</li>";
         });
         jobListHtml += "</ul>";
@@ -263,9 +290,7 @@
         });
 
         overlay.addEventListener("click", function (e) {
-            if (e.target === overlay) {
-                document.body.removeChild(overlay);
-            }
+            if (e.target === overlay) document.body.removeChild(overlay);
         });
 
         document.getElementById("confirmPromoteBtn").addEventListener("click", function () {
@@ -279,9 +304,14 @@
         var originalText = promoteBtn.getAttribute("data-original-text") || promoteBtn.textContent;
         promoteBtn.textContent = getMessage("loading") || "Promoting...";
 
+        var sourceInstance = sourceInstanceSelect ? sourceInstanceSelect.value : "";
+
         var formData = new FormData();
         formData.append("jobs", selectedJobs.join(","));
         formData.append("forceUpdate", forceUpdate ? "true" : "false");
+        if (sourceInstance) {
+            formData.append("sourceInstance", sourceInstance);
+        }
 
         var headers = buildHeaders();
 
@@ -291,9 +321,7 @@
             body: formData,
             credentials: "same-origin",
         })
-            .then(function (response) {
-                return response.text();
-            })
+            .then(function (response) { return response.text(); })
             .then(function (text) {
                 var result = safeParseJson(text);
                 if (result.success && Array.isArray(result.data)) {
@@ -326,26 +354,14 @@
         results.forEach(function (r) {
             var statusClass = "jp-status-" + r.status.toLowerCase();
             var statusText = r.status;
-            if (r.status === "SUCCESS") {
-                statusText = getMessage("success");
-            } else if (r.status === "SKIPPED") {
-                statusText = getMessage("skipped");
-            } else if (r.status === "FAILURE") {
-                statusText = getMessage("failure");
-            }
+            if (r.status === "SUCCESS") statusText = getMessage("success");
+            else if (r.status === "SKIPPED") statusText = getMessage("skipped");
+            else if (r.status === "FAILURE") statusText = getMessage("failure");
             resultHtml +=
                 "<tr>" +
-                "<td>" +
-                escapeHtml(r.jobFullPath) +
-                "</td>" +
-                "<td class='" +
-                statusClass +
-                "'>" +
-                statusText +
-                "</td>" +
-                "<td>" +
-                escapeHtml(r.message || "") +
-                "</td>" +
+                "<td>" + escapeHtml(r.jobFullPath) + "</td>" +
+                "<td class='" + statusClass + "'>" + statusText + "</td>" +
+                "<td>" + escapeHtml(r.message || "") + "</td>" +
                 "</tr>";
         });
         resultHtml += "</tbody></table>";
@@ -365,10 +381,171 @@
         });
 
         overlay.addEventListener("click", function (e) {
-            if (e.target === overlay) {
-                document.body.removeChild(overlay);
+            if (e.target === overlay) document.body.removeChild(overlay);
+        });
+    }
+
+    // Audit Log functionality (root page only)
+    if (auditLogBtn) {
+        auditLogBtn.addEventListener("click", function () {
+            auditLogPage = 1;
+            showAuditLogDialog();
+        });
+    }
+
+    function showAuditLogDialog() {
+        var overlay = document.createElement("div");
+        overlay.className = "jp-dialog-overlay";
+
+        var dialog = document.createElement("div");
+        dialog.className = "jp-dialog jp-dialog-audit";
+
+        dialog.innerHTML =
+            "<h2>" + getMessage("auditLog-title") + "</h2>" +
+            "<div class='jp-audit-retention'>" +
+            "<label>" + getMessage("auditLog-retention") + " <input type='number' id='auditRetentionDays' min='1' value='' style='width:60px;'/> " + getMessage("auditLog-days") + "</label>" +
+            "<button class='jenkins-button jenkins-button--primary' id='saveRetentionBtn' style='margin-left:8px;'>" + getMessage("auditLog-retentionSave") + "</button>" +
+            "</div>" +
+            "<div id='auditLogContent' style='margin-top:12px;'></div>" +
+            "<div class='jp-dialog-actions'>" +
+            "<button class='jenkins-button' id='auditLogPrevBtn'>" + getMessage("auditLog-prev") + "</button>" +
+            "<span id='auditLogPageInfo' style='margin:0 8px;'></span>" +
+            "<button class='jenkins-button' id='auditLogNextBtn'>" + getMessage("auditLog-next") + "</button>" +
+            "<button class='jenkins-button jenkins-button--primary' id='closeAuditBtn'>" + getMessage("close-btn") + "</button>" +
+            "</div>";
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        document.getElementById("closeAuditBtn").addEventListener("click", function () {
+            document.body.removeChild(overlay);
+        });
+
+        overlay.addEventListener("click", function (e) {
+            if (e.target === overlay) document.body.removeChild(overlay);
+        });
+
+        document.getElementById("auditLogPrevBtn").addEventListener("click", function () {
+            if (auditLogPage > 1) {
+                auditLogPage--;
+                loadAuditLogs();
             }
         });
+
+        document.getElementById("auditLogNextBtn").addEventListener("click", function () {
+            auditLogPage++;
+            loadAuditLogs();
+        });
+
+        document.getElementById("saveRetentionBtn").addEventListener("click", function () {
+            var days = document.getElementById("auditRetentionDays").value;
+            if (!days || parseInt(days) < 1) {
+                alert("Invalid retention days");
+                return;
+            }
+            var formData = new FormData();
+            formData.append("retentionDays", days);
+            var headers = buildHeaders();
+            fetch(actionUrl + "/updateAuditLogRetention", {
+                method: "POST",
+                headers: headers,
+                body: formData,
+                credentials: "same-origin",
+            })
+                .then(function (response) { return response.text(); })
+                .then(function (text) {
+                    var result = safeParseJson(text);
+                    if (result.success) {
+                        alert("Retention days updated to " + days);
+                    } else {
+                        alert(result.error || "Failed to update retention days");
+                    }
+                })
+                .catch(function (err) {
+                    alert("Error: " + err.message);
+                });
+        });
+
+        loadAuditLogs();
+    }
+
+    function loadAuditLogs() {
+        var contentDiv = document.getElementById("auditLogContent");
+        if (!contentDiv) return;
+
+        contentDiv.innerHTML = "<p>" + (getMessage("loading") || "Loading...") + "</p>";
+
+        var formData = new FormData();
+        formData.append("page", auditLogPage.toString());
+        formData.append("pageSize", auditLogPageSize.toString());
+        var headers = buildHeaders();
+
+        fetch(actionUrl + "/getAuditLogs", {
+            method: "POST",
+            headers: headers,
+            body: formData,
+            credentials: "same-origin",
+        })
+            .then(function (response) { return response.text(); })
+            .then(function (text) {
+                var result = safeParseJson(text);
+                if (result.success && result.data) {
+                    var data = result.data;
+                    var logs = data.logs || [];
+                    var total = data.total || 0;
+                    var page = data.page || 1;
+                    var pageSize = data.pageSize || 20;
+                    var totalPages = Math.ceil(total / pageSize) || 1;
+
+                    // Update retention days input
+                    var retentionInput = document.getElementById("auditRetentionDays");
+                    if (retentionInput && !retentionInput.value) {
+                        // Try to get from global config - just leave default for now
+                    }
+
+                    var pageInfo = document.getElementById("auditLogPageInfo");
+                    if (pageInfo) {
+                        pageInfo.textContent = page + " / " + totalPages;
+                    }
+
+                    if (logs.length === 0) {
+                        contentDiv.innerHTML = "<p>" + getMessage("auditLog-noLogs") + "</p>";
+                        return;
+                    }
+
+                    var html = "<table class='jenkins-table'><thead><tr>" +
+                        "<th>" + getMessage("auditLog-time") + "</th>" +
+                        "<th>" + getMessage("auditLog-user") + "</th>" +
+                        "<th>" + getMessage("auditLog-instance") + "</th>" +
+                        "<th>" + getMessage("auditLog-jobs") + "</th>" +
+                        "<th>" + getMessage("auditLog-mode") + "</th>" +
+                        "<th>" + getMessage("auditLog-result") + "</th>" +
+                        "</tr></thead><tbody>";
+
+                    logs.forEach(function (log) {
+                        var mode = log.forceUpdate ? getMessage("force-update") : getMessage("normal-update");
+                        var resultText = getMessage("success") + ":" + log.successCount + " " +
+                            getMessage("failure") + ":" + log.failureCount + " " +
+                            getMessage("skipped") + ":" + log.skippedCount;
+                        html += "<tr>" +
+                            "<td>" + escapeHtml(log.formattedTimestamp || "") + "</td>" +
+                            "<td>" + escapeHtml(log.username || "") + "</td>" +
+                            "<td>" + escapeHtml(log.sourceInstance || "") + "</td>" +
+                            "<td title='" + escapeHtml((log.jobPaths || []).join(", ")) + "'>" + escapeHtml(log.jobPathsSummary || "") + "</td>" +
+                            "<td>" + mode + "</td>" +
+                            "<td>" + resultText + "</td>" +
+                            "</tr>";
+                    });
+
+                    html += "</tbody></table>";
+                    contentDiv.innerHTML = html;
+                } else {
+                    contentDiv.innerHTML = "<p>" + (result.error || "Failed to load audit logs") + "</p>";
+                }
+            })
+            .catch(function (err) {
+                contentDiv.innerHTML = "<p>Error: " + escapeHtml(err.message) + "</p>";
+            });
     }
 
     function escapeHtml(str) {

@@ -40,9 +40,17 @@ public class PromotionService {
     private static final Logger LOGGER = Logger.getLogger(PromotionService.class.getName());
 
     public List<RemoteJobInfo> fetchRemoteJobs(String folderPath) throws Exception {
+        return fetchRemoteJobs(folderPath, null);
+    }
+
+    public List<RemoteJobInfo> fetchRemoteJobs(String folderPath, String sourceInstanceName) throws Exception {
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
-        String url = config.getSourceJenkinsUrl();
-        var credentials = config.resolveCredentials();
+        JobPromotionGlobalConfig.SourceJenkinsInstance instance = config.getInstanceByName(sourceInstanceName);
+        if (instance == null) {
+            throw new IllegalStateException(Messages.PromotionService_sourceNotConfigured());
+        }
+        String url = instance.getUrl();
+        var credentials = config.resolveCredentialsForInstance(instance);
 
         if (url == null || url.trim().isEmpty()) {
             throw new IllegalStateException(Messages.PromotionService_sourceNotConfigured());
@@ -70,11 +78,27 @@ public class PromotionService {
             @NonNull ModifiableTopLevelItemGroup targetGroup,
             boolean forceUpdate,
             String currentFolderPath) {
+        return promoteJobs(jobFullPaths, targetGroup, forceUpdate, currentFolderPath, null);
+    }
+
+    public Map<String, PromotionResult> promoteJobs(
+            @NonNull List<String> jobFullPaths,
+            @NonNull ModifiableTopLevelItemGroup targetGroup,
+            boolean forceUpdate,
+            String currentFolderPath,
+            String sourceInstanceName) {
 
         Map<String, PromotionResult> results = new HashMap<>();
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
-        String url = config.getSourceJenkinsUrl();
-        var credentials = config.resolveCredentials();
+        JobPromotionGlobalConfig.SourceJenkinsInstance instance = config.getInstanceByName(sourceInstanceName);
+        if (instance == null) {
+            for (String path : jobFullPaths) {
+                results.put(path, PromotionResult.failure(path, Messages.PromotionService_sourceNotConfigured()));
+            }
+            return results;
+        }
+        String url = instance.getUrl();
+        var credentials = config.resolveCredentialsForInstance(instance);
 
         if (url == null || url.trim().isEmpty()) {
             for (String path : jobFullPaths) {

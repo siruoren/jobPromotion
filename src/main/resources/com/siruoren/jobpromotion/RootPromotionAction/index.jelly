@@ -10,9 +10,13 @@
                         <div class="jenkins-section-header">
                             <h2>${%sourceJobs}</h2>
                         </div>
-                        <div class="jenkins-form-row" style="display:flex;align-items:center;gap:8px;">
+                        <div class="jenkins-form-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <select id="sourceInstanceSelect" class="jenkins-input" style="min-width:150px;">
+                                <option value="">${%selectInstance}</option>
+                            </select>
                             <input type="text" id="folderPathInput" name="folderPath" value="" placeholder="${%folderPathPlaceholder}" class="jenkins-input" style="flex:1;"/>
                             <button id="loadJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadJobs}">${%loadJobs}</button>
+                            <button id="auditLogBtn" class="jenkins-button" data-original-text="${%auditLog}">${%auditLog}</button>
                         </div>
                     </div>
                 </div>
@@ -86,6 +90,20 @@
                     <span id="msg-noJobsSelected">${%noJobsSelected}</span>
                     <span id="msg-folder">${%folder}</span>
                     <span id="msg-job">${%job}</span>
+                    <span id="msg-auditLog-title">${%auditLogTitle}</span>
+                    <span id="msg-auditLog-time">${%auditLogTime}</span>
+                    <span id="msg-auditLog-user">${%auditLogUser}</span>
+                    <span id="msg-auditLog-instance">${%auditLogInstance}</span>
+                    <span id="msg-auditLog-jobs">${%auditLogJobs}</span>
+                    <span id="msg-auditLog-mode">${%auditLogMode}</span>
+                    <span id="msg-auditLog-result">${%auditLogResult}</span>
+                    <span id="msg-auditLog-retention">${%auditLogRetention}</span>
+                    <span id="msg-auditLog-retentionSave">${%auditLogRetentionSave}</span>
+                    <span id="msg-auditLog-days">${%auditLogDays}</span>
+                    <span id="msg-auditLog-noLogs">${%auditLogNoLogs}</span>
+                    <span id="msg-auditLog-prev">${%auditLogPrev}</span>
+                    <span id="msg-auditLog-next">${%auditLogNext}</span>
+                    <span id="msg-selectInstance">${%selectInstance}</span>
                 </div>
             </div>
 

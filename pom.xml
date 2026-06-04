@@ -23,6 +23,10 @@
         <java.version>17</java.version>
     </properties>
 
+    <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
+    </build>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
