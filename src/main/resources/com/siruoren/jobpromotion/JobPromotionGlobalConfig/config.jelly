@@ -1,0 +1,14 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:section title="${%globalConfig.title}">
+
+        <f:entry title="${%globalConfig.instances}" field="instances">
+            <f:repeatableProperty field="instances" add="${%globalConfig.addInstance}"/>
+        </f:entry>
+
+        <f:entry title="${%globalConfig.auditLogRetentionDays}" description="${%globalConfig.auditLogRetentionDaysDesc}" field="auditLogRetentionDays">
+            <f:number default="30" min="1"/>
+        </f:entry>
+
+    </f:section>
+</j:jelly>
