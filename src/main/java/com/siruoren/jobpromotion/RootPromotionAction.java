@@ -126,12 +126,13 @@ public class RootPromotionAction implements RootAction {
      * Get audit logs for the audit log page.
      */
     @RequirePOST
-    public HttpResponse doGetAuditLogs(@QueryParameter("page") String pageParam,
-                                        @QueryParameter("pageSize") String pageSizeParam) throws IOException, ServletException {
+    public HttpResponse doGetAuditLogs(StaplerRequest2 req) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
         int page = 1;
         int pageSize = 20;
+        String pageParam = req.getParameter("page");
+        String pageSizeParam = req.getParameter("pageSize");
         try {
             if (pageParam != null && !pageParam.isEmpty()) page = Integer.parseInt(pageParam);
             if (pageSizeParam != null && !pageSizeParam.isEmpty()) pageSize = Integer.parseInt(pageSizeParam);
@@ -145,11 +146,14 @@ public class RootPromotionAction implements RootAction {
         List<AuditLogEntry> logs = auditService.getLogs(page, pageSize);
         int total = auditService.getTotalLogCount();
 
+        int retentionDays = JobPromotionGlobalConfig.get().getAuditLogRetentionDays();
+
         JSONObject result = new JSONObject();
         result.put("logs", AuditLogEntry.toJsonArray(logs));
         result.put("total", total);
         result.put("page", page);
         result.put("pageSize", pageSize);
+        result.put("retentionDays", retentionDays);
         return new JsonResponse(result);
     }
 
@@ -157,9 +161,10 @@ public class RootPromotionAction implements RootAction {
      * Update audit log retention days.
      */
     @RequirePOST
-    public HttpResponse doUpdateAuditLogRetention(@QueryParameter("retentionDays") String retentionDaysParam) throws IOException, ServletException {
+    public HttpResponse doUpdateAuditLogRetention(StaplerRequest2 req) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
+        String retentionDaysParam = req.getParameter("retentionDays");
         int retentionDays = 30;
         try {
             if (retentionDaysParam != null && !retentionDaysParam.isEmpty()) {

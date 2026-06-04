@@ -497,10 +497,10 @@
                     var pageSize = data.pageSize || 20;
                     var totalPages = Math.ceil(total / pageSize) || 1;
 
-                    // Update retention days input
+                    // Update retention days input with value from server
                     var retentionInput = document.getElementById("auditRetentionDays");
-                    if (retentionInput && !retentionInput.value) {
-                        // Try to get from global config - just leave default for now
+                    if (retentionInput && data.retentionDays) {
+                        retentionInput.value = data.retentionDays;
                     }
 
                     var pageInfo = document.getElementById("auditLogPageInfo");
