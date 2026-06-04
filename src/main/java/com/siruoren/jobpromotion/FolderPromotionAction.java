@@ -31,7 +31,7 @@ public class FolderPromotionAction implements Action {
     @Override
     public String getIconFileName() {
         if (folder.hasPermission(Item.CREATE) && folder.hasPermission(Item.CONFIGURE)) {
-            return "symbol-promote plugin-job-promotion";
+            return "symbol-download";
         }
         return null;
     }

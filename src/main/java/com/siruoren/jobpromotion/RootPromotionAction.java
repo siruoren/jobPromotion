@@ -28,7 +28,7 @@ public class RootPromotionAction implements RootAction {
     @Override
     public String getIconFileName() {
         if (Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
-            return "symbol-promote plugin-job-promotion";
+            return "symbol-download";
         }
         return null;
     }
