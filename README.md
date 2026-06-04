@@ -86,3 +86,8 @@ com.siruoren.jobpromotion
 ## License
 
 MIT License
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=siruoren/jobPromotion&type=date&legend=top-left)](https://www.star-history.com/?repos=siruoren%2FjobPromotion&type=date&legend=top-left)
