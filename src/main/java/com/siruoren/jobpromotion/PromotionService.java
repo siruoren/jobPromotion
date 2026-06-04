@@ -50,17 +50,17 @@ public class PromotionService {
             throw new IllegalStateException(Messages.PromotionService_sourceNotConfigured());
         }
         String url = instance.getUrl();
-        var credentials = config.resolveCredentialsForInstance(instance);
+        String[] cred = config.resolveCredentialsForInstance(instance);
 
         if (url == null || url.trim().isEmpty()) {
             throw new IllegalStateException(Messages.PromotionService_sourceNotConfigured());
         }
-        if (credentials == null) {
+        if (cred == null) {
             throw new IllegalStateException(Messages.PromotionService_credentialsNotConfigured());
         }
 
         JenkinsRemoteClient client = new JenkinsRemoteClient(
-                url.trim(), credentials.getUsername(), credentials.getPassword().getPlainText()
+                url.trim(), cred[0], cred[1]
         );
         return client.listJobs(folderPath);
     }
@@ -98,7 +98,7 @@ public class PromotionService {
             return results;
         }
         String url = instance.getUrl();
-        var credentials = config.resolveCredentialsForInstance(instance);
+        String[] cred = config.resolveCredentialsForInstance(instance);
 
         if (url == null || url.trim().isEmpty()) {
             for (String path : jobFullPaths) {
@@ -106,7 +106,7 @@ public class PromotionService {
             }
             return results;
         }
-        if (credentials == null) {
+        if (cred == null) {
             for (String path : jobFullPaths) {
                 results.put(path, PromotionResult.failure(path, Messages.PromotionService_credentialsNotConfigured()));
             }
@@ -114,7 +114,7 @@ public class PromotionService {
         }
 
         JenkinsRemoteClient client = new JenkinsRemoteClient(
-                url.trim(), credentials.getUsername(), credentials.getPassword().getPlainText()
+                url.trim(), cred[0], cred[1]
         );
 
         // Always resolve from Jenkins root, not from current targetGroup

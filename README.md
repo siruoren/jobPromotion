@@ -6,6 +6,7 @@ Jenkins 任务晋级插件 - 从源 Jenkins 实例晋级（同步）任务到当
 
 - **多源 Jenkins 实例配置**：在 Manage Jenkins 中配置多个源 Jenkins 实例（名称、地址、凭据），每个实例支持连接测试按钮验证认证
 - **凭据选择**：系统凭据下拉框支持直接新建凭据
+- **API Token 认证**：使用用户名 + API Token（Secret Text 凭据）认证，凭据选择器支持直接新建凭据
 - **实例选择**：晋级页面支持选择指定的源 Jenkins 实例进行晋级
 - **任务晋级入口**：根目录和文件夹（Folder）左侧任务栏添加"Job Promotion"入口
 - **权限控制**：
@@ -50,8 +51,8 @@ mvn clean package -DskipTests
 
 ## 配置步骤
 
-1. **配置凭据**：Manage Jenkins → Credentials → 添加 Username/Password 类型的凭据
-2. **配置源 Jenkins 实例**：Manage Jenkins → System → Job Promotion → 添加源 Jenkins 实例（名称、URL、凭据）→ 点击 Test Connection 验证
+1. **配置凭据**：Manage Jenkins → Credentials → 添加 "Secret text" 类型凭据，存储源 Jenkins 的 API Token（Jenkins > 用户 > 配置 > API Token）
+2. **配置源 Jenkins 实例**：Manage Jenkins → System → Job Promotion → 添加源 Jenkins 实例（名称、URL、用户名、API Token 凭据）→ 点击 Test Connection 验证
 3. **使用晋级**：
    - 在根目录或文件夹页面左侧点击"Job Promotion"
    - 选择源 Jenkins 实例

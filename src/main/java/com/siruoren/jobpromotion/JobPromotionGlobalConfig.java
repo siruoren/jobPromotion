@@ -2,14 +2,13 @@ package com.siruoren.jobpromotion;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.util.FormValidation;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.StaplerRequest2;
 
 import java.util.ArrayList;
@@ -84,35 +83,38 @@ public class JobPromotionGlobalConfig extends GlobalConfiguration {
 
     /**
      * Resolve credentials for a specific instance.
+     * Uses Username + API Token (Secret text) authentication.
+     * Returns a String array: [username, apiToken]
      */
-    public StandardUsernamePasswordCredentials resolveCredentialsForInstance(SourceJenkinsInstance instance) {
-        if (instance == null || instance.getCredentialsId() == null || instance.getCredentialsId().trim().isEmpty()) {
+    public String[] resolveCredentialsForInstance(SourceJenkinsInstance instance) {
+        if (instance == null) {
             return null;
         }
-        return resolveCredentials(instance.getCredentialsId());
+
+        if (instance.getUsername() != null && !instance.getUsername().trim().isEmpty()
+                && instance.getApiTokenCredentialsId() != null && !instance.getApiTokenCredentialsId().trim().isEmpty()) {
+            StringCredentials apiTokenCred = resolveApiTokenCredentials(instance.getApiTokenCredentialsId());
+            if (apiTokenCred != null) {
+                return new String[]{instance.getUsername().trim(), apiTokenCred.getSecret().getPlainText()};
+            }
+        }
+
+        return null;
     }
 
-    public StandardUsernamePasswordCredentials resolveCredentials(String credId) {
+    public StringCredentials resolveApiTokenCredentials(String credId) {
         if (credId == null || credId.trim().isEmpty()) {
             return null;
         }
         return CredentialsMatchers.firstOrNull(
                 CredentialsProvider.lookupCredentials(
-                        StandardUsernamePasswordCredentials.class,
+                        StringCredentials.class,
                         Jenkins.get(),
                         null,
                         Collections.<DomainRequirement>emptyList()
                 ),
                 CredentialsMatchers.withId(credId.trim())
         );
-    }
-
-    // Keep backward compatibility
-    public StandardUsernamePasswordCredentials resolveCredentials() {
-        if (instances.isEmpty()) {
-            return null;
-        }
-        return resolveCredentialsForInstance(instances.get(0));
     }
 
     // Keep backward compatibility
