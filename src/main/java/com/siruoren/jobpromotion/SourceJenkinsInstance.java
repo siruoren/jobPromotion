@@ -2,7 +2,6 @@ package com.siruoren.jobpromotion;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
@@ -11,6 +10,7 @@ import hudson.model.Descriptor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -28,16 +28,18 @@ public class SourceJenkinsInstance extends AbstractDescribableImpl<SourceJenkins
 
     private String name;
     private String url;
-    private String credentialsId;
+    private String username;
+    private String apiTokenCredentialsId;
 
     public SourceJenkinsInstance() {
     }
 
     @DataBoundConstructor
-    public SourceJenkinsInstance(String name, String url, String credentialsId) {
+    public SourceJenkinsInstance(String name, String url, String username, String apiTokenCredentialsId) {
         this.name = name;
         this.url = url;
-        this.credentialsId = credentialsId;
+        this.username = username;
+        this.apiTokenCredentialsId = apiTokenCredentialsId;
     }
 
     public String getName() {
@@ -56,12 +58,20 @@ public class SourceJenkinsInstance extends AbstractDescribableImpl<SourceJenkins
         this.url = url;
     }
 
-    public String getCredentialsId() {
-        return credentialsId;
+    public String getUsername() {
+        return username;
     }
 
-    public void setCredentialsId(String credentialsId) {
-        this.credentialsId = credentialsId;
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getApiTokenCredentialsId() {
+        return apiTokenCredentialsId;
+    }
+
+    public void setApiTokenCredentialsId(String apiTokenCredentialsId) {
+        this.apiTokenCredentialsId = apiTokenCredentialsId;
     }
 
     @Extension
@@ -73,20 +83,25 @@ public class SourceJenkinsInstance extends AbstractDescribableImpl<SourceJenkins
             return "Source Jenkins Instance";
         }
 
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Jenkins context,
-                                                      @QueryParameter String credentialsId) {
+        /**
+         * Fill API Token credentials dropdown - shows Secret text credentials.
+         * Uses StandardCredentials type so that c:select can show the "Add" button
+         * for creating new credentials inline.
+         */
+        public ListBoxModel doFillApiTokenCredentialsIdItems(@AncestorInPath Jenkins context,
+                                                              @QueryParameter String apiTokenCredentialsId) {
             if (context == null || !context.hasPermission(Jenkins.ADMINISTER)) {
                 return new ListBoxModel();
             }
-            List<StandardUsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(
-                    StandardUsernamePasswordCredentials.class,
+            List<StringCredentials> credentials = CredentialsProvider.lookupCredentials(
+                    StringCredentials.class,
                     context,
                     null,
                     Collections.<DomainRequirement>emptyList()
             );
             ListBoxModel items = new ListBoxModel();
-            items.add(Messages.JobPromotionGlobalConfig_selectCredentials(), "");
-            for (StandardUsernamePasswordCredentials c : credentials) {
+            items.add(Messages.SourceJenkinsInstance_selectApiToken(), "");
+            for (StringCredentials c : credentials) {
                 items.add(c.getDescription() + " (" + c.getId() + ")", c.getId());
             }
             return items;
@@ -95,24 +110,28 @@ public class SourceJenkinsInstance extends AbstractDescribableImpl<SourceJenkins
         @RequirePOST
         public FormValidation doTestConnection(
                 @QueryParameter("url") String url,
-                @QueryParameter("credentialsId") String credId) {
+                @QueryParameter("username") String usernameParam,
+                @QueryParameter("apiTokenCredentialsId") String apiTokenCredId) {
             Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
             if (url == null || url.trim().isEmpty()) {
                 return FormValidation.error(Messages.JobPromotionGlobalConfig_urlRequired());
             }
-            if (credId == null || credId.trim().isEmpty()) {
-                return FormValidation.error(Messages.JobPromotionGlobalConfig_credentialsRequired());
+            if (usernameParam == null || usernameParam.trim().isEmpty()) {
+                return FormValidation.error(Messages.SourceJenkinsInstance_usernameRequired());
+            }
+            if (apiTokenCredId == null || apiTokenCredId.trim().isEmpty()) {
+                return FormValidation.error(Messages.SourceJenkinsInstance_apiTokenRequired());
+            }
+
+            StringCredentials apiTokenCred = resolveApiTokenCredentials(apiTokenCredId);
+            if (apiTokenCred == null) {
+                return FormValidation.error(Messages.SourceJenkinsInstance_apiTokenNotFound());
             }
 
             try {
-                StandardUsernamePasswordCredentials credentials = resolveCredentials(credId);
-                if (credentials == null) {
-                    return FormValidation.error(Messages.JobPromotionGlobalConfig_credentialsNotFound());
-                }
-
                 JenkinsRemoteClient client = new JenkinsRemoteClient(
-                        url.trim(), credentials.getUsername(), credentials.getPassword().getPlainText()
+                        url.trim(), usernameParam.trim(), apiTokenCred.getSecret().getPlainText()
                 );
                 boolean success = client.testConnection();
                 if (success) {
@@ -126,13 +145,13 @@ public class SourceJenkinsInstance extends AbstractDescribableImpl<SourceJenkins
             }
         }
 
-        private StandardUsernamePasswordCredentials resolveCredentials(String credId) {
+        private StringCredentials resolveApiTokenCredentials(String credId) {
             if (credId == null || credId.trim().isEmpty()) {
                 return null;
             }
             return CredentialsMatchers.firstOrNull(
                     CredentialsProvider.lookupCredentials(
-                            StandardUsernamePasswordCredentials.class,
+                            StringCredentials.class,
                             Jenkins.get(),
                             null,
                             Collections.<DomainRequirement>emptyList()

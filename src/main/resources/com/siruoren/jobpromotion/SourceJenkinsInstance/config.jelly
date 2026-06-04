@@ -6,14 +6,17 @@
     <f:entry title="${%sourceJenkinsUrl}" description="${%sourceJenkinsUrlDesc}" field="url">
         <f:textbox/>
     </f:entry>
-    <f:entry title="${%credentialsId}" description="${%credentialsIdDesc}" field="credentialsId">
+    <f:entry title="${%username}" description="${%usernameDesc}" field="username">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%apiTokenCredentialsId}" description="${%apiTokenCredentialsIdDesc}" field="apiTokenCredentialsId">
         <c:select/>
     </f:entry>
     <f:validateButton
         title="${%testConnection}"
         progress="${%testing}"
         method="testConnection"
-        with="url,credentialsId"/>
+        with="url,username,apiTokenCredentialsId"/>
     <f:entry title="">
         <div align="right">
             <f:repeatableDeleteButton/>
