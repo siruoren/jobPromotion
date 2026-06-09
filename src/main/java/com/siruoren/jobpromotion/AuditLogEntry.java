@@ -5,12 +5,13 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class AuditLogEntry {
+public class AuditLogEntry implements java.io.Serializable {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private static final long serialVersionUID = 1L;
 
     private long timestamp;
     private String username;
@@ -112,7 +113,7 @@ public class AuditLogEntry {
     }
 
     public String getFormattedTimestamp() {
-        return DATE_FORMAT.format(new Date(timestamp));
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp));
     }
 
     public String getJobPathsSummary() {
@@ -151,5 +152,26 @@ public class AuditLogEntry {
             arr.add(entry.toJson());
         }
         return arr;
+    }
+
+    public static AuditLogEntry fromJson(JSONObject obj) {
+        AuditLogEntry entry = new AuditLogEntry();
+        entry.setTimestamp(obj.optLong("timestamp", 0));
+        entry.setUsername(obj.optString("username", ""));
+        entry.setAction(obj.optString("action", ""));
+        entry.setSourceInstance(obj.optString("sourceInstance", ""));
+        entry.setForceUpdate(obj.optBoolean("forceUpdate", false));
+        entry.setSuccessCount(obj.optInt("successCount", 0));
+        entry.setFailureCount(obj.optInt("failureCount", 0));
+        entry.setSkippedCount(obj.optInt("skippedCount", 0));
+        JSONArray pathsArr = obj.optJSONArray("jobPaths");
+        if (pathsArr != null) {
+            List<String> paths = new ArrayList<>();
+            for (int i = 0; i < pathsArr.size(); i++) {
+                paths.add(pathsArr.getString(i));
+            }
+            entry.setJobPaths(paths);
+        }
+        return entry;
     }
 }

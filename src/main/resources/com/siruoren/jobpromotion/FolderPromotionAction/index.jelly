@@ -5,70 +5,158 @@
             <h1>${%pageTitle} - ${it.folder.fullName}</h1>
 
             <div id="job-promotion-container">
-                <div class="jenkins-form-section">
-                    <div class="jenkins-form-item">
-                        <div class="jenkins-section-header">
-                            <h2>${%sourceJobs}</h2>
+                <!-- Hidden folder path for JS to read -->
+                <input type="hidden" id="folderPathInput" value="${it.folder.fullName}"/>
+
+                <!-- Two-column layout: Delivery | Promotion -->
+                <div class="jp-two-columns">
+
+                    <!-- Left Column: Task Delivery -->
+                    <div class="jp-column jp-column-delivery">
+                        <div class="jp-column-header">
+                            <h2>${%deliverySection}</h2>
                         </div>
-                        <div class="jenkins-form-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <select id="sourceInstanceSelect" class="jenkins-input" style="min-width:150px;">
-                                <option value="">${%selectInstance}</option>
-                            </select>
-                            <input type="text" id="folderPathInput" name="folderPath" value="${it.folder.fullName}" readonly="readonly" class="jenkins-input" style="flex:1;"/>
-                            <button id="loadJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadJobs}">${%loadJobs}</button>
+
+                        <!-- Load local jobs for delivery -->
+                        <div class="jp-section">
+                            <div class="jp-toolbar">
+                                <button id="loadLocalJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadLocalJobs}">${%loadLocalJobs}</button>
+                            </div>
+                        </div>
+
+                        <!-- Local Job List (for delivery) -->
+                        <div id="jobListSection" style="display:none;">
+                            <div class="jp-section-header">
+                                <h3>${%selectJobsToDeliver}</h3>
+                                <div class="jp-toolbar">
+                                    <button id="selectAllBtn" class="jenkins-button">${%selectAll}</button>
+                                    <button id="deselectAllBtn" class="jenkins-button">${%deselectAll}</button>
+                                </div>
+                            </div>
+                            <div class="jenkins-table-wrap">
+                                <table class="jenkins-table" id="jobTable">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="headerCheckbox"/></th>
+                                            <th>${%jobName}</th>
+                                            <th>${%jobPath}</th>
+                                            <th>${%jobType}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="jobTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="margin-top:12px;">
+                                <button id="deliverBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%deliver}">${%deliver}</button>
+                            </div>
+                        </div>
+
+                        <!-- Delivery List -->
+                        <div id="deliveryListSection" style="display:none;">
+                            <div class="jp-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                                <h3>${%deliveryList}</h3>
+                                <div class="jp-toolbar" style="display:flex;align-items:center;gap:8px;">
+                                    <select id="deliveryStatusFilter" class="jenkins-input" style="min-width:100px;">
+                                        <option value="delivered">${%statusDelivered}</option>
+                                        <option value="promoted">${%statusPromoted}</option>
+                                        <option value="all">${%statusAll}</option>
+                                    </select>
+                                    <button id="loadDeliveryBtn" class="jenkins-button" data-original-text="${%refresh}">${%refresh}</button>
+                                    <button id="cancelDeliveryBtn" class="jenkins-button jenkins-button--danger" data-original-text="${%cancelDelivery}">${%cancelDelivery}</button>
+                                </div>
+                            </div>
+                            <div class="jenkins-table-wrap">
+                                <table class="jenkins-table" id="deliveryTable">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="deliveryHeaderCheckbox"/></th>
+                                            <th>${%jobName}</th>
+                                            <th>${%jobPath}</th>
+                                            <th>${%jobType}</th>
+                                            <th>${%status}</th>
+                                            <th>${%deliveredAt}</th>
+                                            <th>${%promotedAt}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="deliveryTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Task Promotion -->
+                    <div class="jp-column jp-column-promotion">
+                        <div class="jp-column-header">
+                            <h2>${%promotionSection}</h2>
+                        </div>
+
+                        <!-- Source instance selection (only in promotion area) -->
+                        <div class="jp-section">
+                            <div class="jp-form-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <label for="sourceInstanceSelect" style="white-space:nowrap;">${%sourceInstance}:</label>
+                                <select id="sourceInstanceSelect" class="jenkins-input" style="min-width:150px;">
+                                    <option value="">${%selectInstance}</option>
+                                </select>
+                                <button id="loadJobsBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%loadJobs}">${%loadJobs}</button>
+                            </div>
+                        </div>
+
+                        <!-- Remote Job List / Source Delivery List -->
+                        <div id="remoteJobListSection" style="display:none;">
+                            <div class="jp-section-header">
+                                <h3>${%selectJobsToPromote}</h3>
+                                <div class="jp-toolbar">
+                                    <button id="selectAllRemoteBtn" class="jenkins-button">${%selectAll}</button>
+                                    <button id="deselectAllRemoteBtn" class="jenkins-button">${%deselectAll}</button>
+                                </div>
+                            </div>
+                            <div class="jenkins-table-wrap">
+                                <table class="jenkins-table" id="remoteJobTable">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="remoteHeaderCheckbox"/></th>
+                                            <th>${%jobName}</th>
+                                            <th>${%jobPath}</th>
+                                            <th>${%jobType}</th>
+                                            <th>${%status}</th>
+                                            <th>${%deliveredAt}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="remoteJobTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Promotion Options -->
+                        <div id="promotionOptions" style="display:none;">
+                            <div class="jp-section">
+                                <h3>${%promotionOptions}</h3>
+                                <div class="jp-form-item">
+                                    <label>
+                                        <input type="radio" name="updateMode" value="normal" checked="checked"/>
+                                        ${%normalUpdate}
+                                    </label>
+                                    <div class="jp-form-desc">${%normalUpdateDesc}</div>
+                                </div>
+                                <div class="jp-form-item">
+                                    <label>
+                                        <input type="radio" name="updateMode" value="force"/>
+                                        ${%forceUpdate}
+                                    </label>
+                                    <div class="jp-form-desc">${%forceUpdateDesc}</div>
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <button id="promoteBtn" class="jenkins-button jenkins-button--primary" data-original-text="${%promote}">${%promote}</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="jobListSection" style="display:none;">
-                    <div class="jenkins-section-header">
-                        <h2>${%selectJobs}</h2>
-                        <div class="jenkins-toolbar">
-                            <button id="selectAllBtn" class="jenkins-button">${%selectAll}</button>
-                            <button id="deselectAllBtn" class="jenkins-button">${%deselectAll}</button>
-                        </div>
-                    </div>
-                    <div id="jobListContainer" class="jenkins-table-wrap">
-                        <table class="jenkins-table" id="jobTable">
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" id="headerCheckbox"/></th>
-                                    <th>${%jobName}</th>
-                                    <th>${%jobPath}</th>
-                                    <th>${%jobType}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="jobTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="promotionOptions" style="display:none;">
-                    <div class="jenkins-form-section">
-                        <div class="jenkins-section-header">
-                            <h2>${%promotionOptions}</h2>
-                        </div>
-                        <div class="jenkins-form-item">
-                            <label>
-                                <input type="radio" name="updateMode" value="normal" checked="checked"/>
-                                ${%normalUpdate}
-                            </label>
-                            <div class="jenkins-form-description">${%normalUpdateDesc}</div>
-                        </div>
-                        <div class="jenkins-form-item">
-                            <label>
-                                <input type="radio" name="updateMode" value="force"/>
-                                ${%forceUpdate}
-                            </label>
-                            <div class="jenkins-form-description">${%forceUpdateDesc}</div>
-                        </div>
-                        <div class="jenkins-form-item">
-                            <button id="promoteBtn" class="jenkins-button jenkins-button--primary jenkins-button--large" data-original-text="${%promote}">${%promote}</button>
-                        </div>
-                    </div>
-                </div>
-
+                <!-- i18n messages -->
                 <div id="i18n-messages" style="display:none;">
                     <span id="msg-confirm-title">${%confirmTitle}</span>
                     <span id="msg-confirm-desc">${%confirmDesc}</span>
@@ -90,6 +178,15 @@
                     <span id="msg-folder">${%folder}</span>
                     <span id="msg-job">${%job}</span>
                     <span id="msg-selectInstance">${%selectInstance}</span>
+                    <span id="msg-deliverSuccess">${%deliverSuccess}</span>
+                    <span id="msg-deliverFailed">${%deliverFailed}</span>
+                    <span id="msg-cancelSuccess">${%cancelSuccess}</span>
+                    <span id="msg-confirmCancelDelivery">${%confirmCancelDelivery}</span>
+                    <span id="msg-statusDelivered">${%statusDelivered}</span>
+                    <span id="msg-statusPromoted">${%statusPromoted}</span>
+                    <span id="msg-statusCancelled">${%statusCancelled}</span>
+                    <span id="msg-statusExpired">${%statusExpired}</span>
+                    <span id="msg-noDeliveryItems">${%noDeliveryItems}</span>
                 </div>
             </div>
 

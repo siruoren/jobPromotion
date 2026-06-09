@@ -152,49 +152,9 @@ public class JenkinsRemoteClient {
 
         List<RemoteJobInfo> topJobs = parseJobsFromJson(body, folderPath != null ? folderPath : "");
 
-        List<RemoteJobInfo> allJobs = new ArrayList<>();
-        for (RemoteJobInfo job : topJobs) {
-            allJobs.add(job);
-            if (job.isFolder()) {
-                try {
-                    List<RemoteJobInfo> subJobs = listSubJobs(job.getFullDisplayName());
-                    allJobs.addAll(subJobs);
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Failed to list sub-jobs for folder: " + job.getFullDisplayName() + ", " + e.getMessage());
-                }
-            }
-        }
-
-        return allJobs;
-    }
-
-    private List<RemoteJobInfo> listSubJobs(String folderPath) throws IOException {
-        String encodedPath = encodeFolderPath(folderPath);
-        String apiUrl = baseUrl + "/job/" + encodedPath + "/api/json?tree=jobs[name,url,color,_class]";
-        LOGGER.log(Level.INFO, "Listing sub-jobs from: " + apiUrl);
-
-        HttpResponseResult result = doHttpGet(apiUrl);
-
-        if (result.responseCode != 200) {
-            LOGGER.log(Level.WARNING, "Failed to list sub-jobs for " + folderPath + ", HTTP " + result.responseCode);
-            return new ArrayList<>();
-        }
-
-        List<RemoteJobInfo> subJobs = parseJobsFromJson(result.body, folderPath);
-
-        List<RemoteJobInfo> allSubJobs = new ArrayList<>();
-        for (RemoteJobInfo job : subJobs) {
-            allSubJobs.add(job);
-            if (job.isFolder()) {
-                try {
-                    allSubJobs.addAll(listSubJobs(job.getFullDisplayName()));
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Failed to list deeper sub-jobs for: " + job.getFullDisplayName());
-                }
-            }
-        }
-
-        return allSubJobs;
+        // Only return immediate children, do NOT recursively load sub-folders.
+        // The frontend should load sub-folders on demand to avoid hanging on large instances.
+        return topJobs;
     }
 
     public String getJobConfig(String fullJobPath) throws IOException {
@@ -316,6 +276,90 @@ public class JenkinsRemoteClient {
             sb.append(URLEncoder.encode(parts[i], StandardCharsets.UTF_8));
         }
         return sb.toString();
+    }
+
+    /**
+     * Notify source Jenkins that jobs have been promoted (callback).
+     * Calls the promotionCallback endpoint on the source Jenkins root action.
+     */
+    public boolean notifyPromotionCallback(@NonNull List<String> jobPaths, @NonNull String promotedBy) throws IOException {
+        ensureCrumb();
+
+        String callbackUrl = baseUrl + "/job-promotion/promotionCallback";
+        LOGGER.log(Level.INFO, "Sending promotion callback to: " + callbackUrl);
+
+        StringBuilder params = new StringBuilder();
+        params.append("jobPaths=").append(URLEncoder.encode(String.join(",", jobPaths), StandardCharsets.UTF_8));
+        params.append("&promotedBy=").append(URLEncoder.encode(promotedBy, StandardCharsets.UTF_8));
+
+        HttpURLConnection conn = openConnection(callbackUrl);
+        try {
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            byte[] postData = params.toString().getBytes(StandardCharsets.UTF_8);
+            conn.setRequestProperty("Content-Length", String.valueOf(postData.length));
+
+            try (java.io.OutputStream os = conn.getOutputStream()) {
+                os.write(postData);
+            }
+
+            int responseCode = conn.getResponseCode();
+            LOGGER.log(Level.INFO, "Promotion callback response: HTTP " + responseCode);
+            return responseCode == 200;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    /**
+     * Fetch delivery list from source Jenkins.
+     * Calls the getDeliveryList endpoint on the source Jenkins root action.
+     */
+    public String fetchDeliveryList(@NonNull String folderPath) throws IOException {
+        ensureCrumb();
+
+        String apiUrl = baseUrl + "/job-promotion/getDeliveryList";
+        LOGGER.log(Level.INFO, "Fetching delivery list from: " + apiUrl);
+
+        StringBuilder params = new StringBuilder();
+        params.append("folderPath=").append(URLEncoder.encode(folderPath, StandardCharsets.UTF_8));
+
+        HttpURLConnection conn = openConnection(apiUrl);
+        try {
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            byte[] postData = params.toString().getBytes(StandardCharsets.UTF_8);
+            conn.setRequestProperty("Content-Length", String.valueOf(postData.length));
+
+            try (java.io.OutputStream os = conn.getOutputStream()) {
+                os.write(postData);
+            }
+
+            int responseCode = conn.getResponseCode();
+            LOGGER.log(Level.INFO, "Fetch delivery list response: HTTP " + responseCode);
+
+            if (responseCode == 401) {
+                throw new IOException("Authentication failed (HTTP 401) when fetching delivery list.");
+            }
+
+            InputStream is = responseCode >= 200 && responseCode < 300 ? conn.getInputStream() : conn.getErrorStream();
+            if (is == null) {
+                throw new IOException("Empty response from delivery list API (HTTP " + responseCode + ")");
+            }
+
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+            }
+            return sb.toString();
+        } finally {
+            conn.disconnect();
+        }
     }
 
     private List<RemoteJobInfo> parseJobsFromJson(String json, String parentPath) {
