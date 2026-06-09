@@ -211,7 +211,9 @@ public class RootPromotionAction implements RootAction {
                     jobFullPaths, Jenkins.get(), forceUpdate, null, sourceInstance);
 
             String username = Jenkins.getAuthentication2().getName();
-            AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results);
+            // Collect deliveredBy from delivery items
+            String deliveredBy = DeliveryStore.getInstance().getDeliveredByForJobs(jobFullPaths);
+            AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results, deliveredBy);
 
             DeliveryService.getInstance().callbackSourceJenkins(sourceInstance, jobFullPaths, username, results);
 

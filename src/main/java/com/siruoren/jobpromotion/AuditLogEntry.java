@@ -22,13 +22,16 @@ public class AuditLogEntry implements java.io.Serializable {
     private int successCount;
     private int failureCount;
     private int skippedCount;
+    private String deliveredBy;
+    private String promotedBy;
 
     public AuditLogEntry() {
     }
 
     public AuditLogEntry(long timestamp, String username, String action, String sourceInstance,
                           List<String> jobPaths, boolean forceUpdate,
-                          int successCount, int failureCount, int skippedCount) {
+                          int successCount, int failureCount, int skippedCount,
+                          String deliveredBy, String promotedBy) {
         this.timestamp = timestamp;
         this.username = username;
         this.action = action;
@@ -38,6 +41,8 @@ public class AuditLogEntry implements java.io.Serializable {
         this.successCount = successCount;
         this.failureCount = failureCount;
         this.skippedCount = skippedCount;
+        this.deliveredBy = deliveredBy;
+        this.promotedBy = promotedBy;
     }
 
     public long getTimestamp() {
@@ -112,6 +117,22 @@ public class AuditLogEntry implements java.io.Serializable {
         this.skippedCount = skippedCount;
     }
 
+    public String getDeliveredBy() {
+        return deliveredBy;
+    }
+
+    public void setDeliveredBy(String deliveredBy) {
+        this.deliveredBy = deliveredBy;
+    }
+
+    public String getPromotedBy() {
+        return promotedBy;
+    }
+
+    public void setPromotedBy(String promotedBy) {
+        this.promotedBy = promotedBy;
+    }
+
     public String getFormattedTimestamp() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp));
     }
@@ -136,6 +157,8 @@ public class AuditLogEntry implements java.io.Serializable {
         obj.put("successCount", successCount);
         obj.put("failureCount", failureCount);
         obj.put("skippedCount", skippedCount);
+        obj.put("deliveredBy", deliveredBy != null ? deliveredBy : "");
+        obj.put("promotedBy", promotedBy != null ? promotedBy : "");
         if (jobPaths != null) {
             JSONArray pathsArr = new JSONArray();
             for (String p : jobPaths) {
@@ -164,6 +187,8 @@ public class AuditLogEntry implements java.io.Serializable {
         entry.setSuccessCount(obj.optInt("successCount", 0));
         entry.setFailureCount(obj.optInt("failureCount", 0));
         entry.setSkippedCount(obj.optInt("skippedCount", 0));
+        entry.setDeliveredBy(obj.optString("deliveredBy", ""));
+        entry.setPromotedBy(obj.optString("promotedBy", ""));
         JSONArray pathsArr = obj.optJSONArray("jobPaths");
         if (pathsArr != null) {
             List<String> paths = new ArrayList<>();

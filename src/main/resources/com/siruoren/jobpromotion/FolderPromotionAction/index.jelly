@@ -75,7 +75,9 @@
                                             <th>${%jobPath}</th>
                                             <th>${%jobType}</th>
                                             <th>${%status}</th>
+                                            <th>${%deliveredBy}</th>
                                             <th>${%deliveredAt}</th>
+                                            <th>${%promotedBy}</th>
                                             <th>${%promotedAt}</th>
                                         </tr>
                                     </thead>
@@ -121,6 +123,7 @@
                                             <th>${%jobPath}</th>
                                             <th>${%jobType}</th>
                                             <th>${%status}</th>
+                                            <th>${%deliveredBy}</th>
                                             <th>${%deliveredAt}</th>
                                         </tr>
                                     </thead>
