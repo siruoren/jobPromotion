@@ -495,7 +495,7 @@
         remoteJobTableBody.innerHTML = "";
 
         if (items.length === 0) {
-            remoteJobTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">' + (getMessage("noDeliveryItems") || "No items") + '</td></tr>';
+            remoteJobTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">' + (getMessage("noDeliveryItems") || "No items") + '</td></tr>';
             return;
         }
 
