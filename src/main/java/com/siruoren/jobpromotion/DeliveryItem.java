@@ -18,8 +18,12 @@ public class DeliveryItem implements Serializable {
     public enum Status {
         DELIVERED,    // 已交付，等待晋级
         PROMOTED,     // 已晋级
-        CANCELLED     // 已撤销
+        CANCELLED,    // 已撤销
+        EXPIRED       // 已过期，需重新交付
     }
+
+    /** 交付过期时间：30天（毫秒） */
+    private static final long DELIVERY_EXPIRY_MS = 30L * 24 * 60 * 60 * 1000;
 
     private String id;
     private String jobName;
@@ -102,6 +106,31 @@ public class DeliveryItem implements Serializable {
 
     public void markCancelled() {
         this.status = Status.CANCELLED;
+    }
+
+    /**
+     * Re-deliver: reset status to DELIVERED and update delivery time and user.
+     */
+    public void reDeliver(@NonNull String deliveredBy, String sourceInstance) {
+        this.status = Status.DELIVERED;
+        this.deliveredBy = deliveredBy;
+        this.deliveredAt = System.currentTimeMillis();
+        this.sourceInstance = sourceInstance;
+        this.promotedBy = null;
+        this.promotedAt = 0;
+    }
+
+    /**
+     * Check if this delivered item has expired (30 days since delivery).
+     */
+    public boolean isExpired() {
+        return status == Status.DELIVERED
+                && deliveredAt > 0
+                && (System.currentTimeMillis() - deliveredAt) > DELIVERY_EXPIRY_MS;
+    }
+
+    public void markExpired() {
+        this.status = Status.EXPIRED;
     }
 
     public JSONObject toJson() {

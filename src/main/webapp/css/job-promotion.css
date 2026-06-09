@@ -186,6 +186,11 @@
     font-weight: bold;
 }
 
+.jp-status-expired {
+    color: var(--red, #f44336);
+    font-weight: bold;
+}
+
 .jp-status-success {
     color: var(--green, #4caf50);
     font-weight: bold;

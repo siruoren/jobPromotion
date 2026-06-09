@@ -183,6 +183,7 @@
                     <span id="msg-statusDelivered">${%statusDelivered}</span>
                     <span id="msg-statusPromoted">${%statusPromoted}</span>
                     <span id="msg-statusCancelled">${%statusCancelled}</span>
+                    <span id="msg-statusExpired">${%statusExpired}</span>
                     <span id="msg-noDeliveryItems">${%noDeliveryItems}</span>
                     <span id="msg-auditLog-title">${%auditLogTitle}</span>
                     <span id="msg-auditLog-time">${%auditLogTime}</span>

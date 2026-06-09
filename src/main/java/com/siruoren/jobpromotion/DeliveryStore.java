@@ -58,6 +58,21 @@ public class DeliveryStore {
     }
 
     /**
+     * Remove expired items by job full paths (used when re-delivering expired items).
+     */
+    public void removeExpiredByPaths(@NonNull List<String> jobFullPaths) {
+        boolean removed;
+        synchronized (items) {
+            removed = items.removeIf(item ->
+                    item.getStatus() == DeliveryItem.Status.EXPIRED
+                            && jobFullPaths.contains(item.getJobFullPath()));
+        }
+        if (removed) {
+            saveToDisk();
+        }
+    }
+
+    /**
      * Add a single delivery item.
      */
     public void addItem(@NonNull DeliveryItem item) {
@@ -128,8 +143,30 @@ public class DeliveryStore {
     }
 
     /**
-     * Get delivered items for a specific folder path (recursive - includes subdirectories).
-     * Only returns DELIVERED status items.
+     * Check and mark expired delivery items.
+     * Items with DELIVERED status for more than 30 days are marked as EXPIRED.
+     * @return number of items newly marked as expired
+     */
+    public int checkAndMarkExpired() {
+        int count;
+        synchronized (items) {
+            count = 0;
+            for (DeliveryItem item : items) {
+                if (item.isExpired()) {
+                    item.markExpired();
+                    count++;
+                }
+            }
+        }
+        if (count > 0) {
+            saveToDisk();
+        }
+        return count;
+    }
+
+    /**
+     * Get delivered items for a specific folder path (non-recursive, only current directory).
+     * Returns DELIVERED status items (auto-marks expired items before querying).
      */
     public List<DeliveryItem> getDeliveredItemsByFolder(@NonNull String folderPath) {
         synchronized (items) {
@@ -209,6 +246,24 @@ public class DeliveryStore {
     }
 
     /**
+     * Get item by job full path and folder path (for re-delivery check).
+     */
+    public DeliveryItem getItemByFullPathAndFolder(@NonNull String jobFullPath, @NonNull String folderPath) {
+        synchronized (items) {
+            for (DeliveryItem item : items) {
+                if (item.getJobFullPath().equals(jobFullPath)) {
+                    String itemFolderPath = item.getFolderPath() != null ? item.getFolderPath() : "";
+                    String effectiveFolderPath = folderPath != null ? folderPath : "";
+                    if (itemFolderPath.equals(effectiveFolderPath)) {
+                        return item;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Check if an item belongs to a folder path (non-recursive, only matches the exact folder).
      */
     private boolean isUnderFolder(DeliveryItem item, String folderPath) {
@@ -249,7 +304,7 @@ public class DeliveryStore {
         }
     }
 
-    private void saveToDisk() {
+    public void saveToDisk() {
         try {
             JSONArray arr;
             synchronized (items) {

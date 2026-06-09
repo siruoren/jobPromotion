@@ -349,6 +349,9 @@
             } else if (item.status === "CANCELLED") {
                 statusText = getMessage("statusCancelled") || "Cancelled";
                 statusClass = "jp-status-cancelled";
+            } else if (item.status === "EXPIRED") {
+                statusText = getMessage("statusExpired") || "Expired";
+                statusClass = "jp-status-expired";
             }
 
             var checkboxHtml = item.status === "DELIVERED"
@@ -514,6 +517,9 @@
             } else if (item.status === "CANCELLED") {
                 statusText = getMessage("statusCancelled") || "Cancelled";
                 statusClass = "jp-status-cancelled";
+            } else if (item.status === "EXPIRED") {
+                statusText = getMessage("statusExpired") || "Expired";
+                statusClass = "jp-status-expired";
             }
 
             var checkboxHtml = item.status === "DELIVERED"

@@ -52,6 +52,7 @@ public class DeliveryService {
         String username = Jenkins.getAuthentication2().getName();
         String[] entries = jobEntries.split(",");
         List<DeliveryItem> newItems = new ArrayList<>();
+        List<DeliveryItem> reDeliveredItems = new ArrayList<>();
 
         for (String entry : entries) {
             String trimmed = entry.trim();
@@ -66,27 +67,37 @@ public class DeliveryService {
 
             String jobName = PathUtil.extractName(parsed.fullPath);
 
-            // Check if already delivered
-            boolean alreadyDelivered;
-            if (folderPath.isEmpty()) {
-                alreadyDelivered = DeliveryStore.getInstance().getDeliveredItems().stream()
-                        .anyMatch(item -> item.getJobFullPath().equals(parsed.fullPath) && item.getStatus() == DeliveryItem.Status.DELIVERED);
+            // Check if already delivered (DELIVERED or EXPIRED status)
+            DeliveryItem existingItem = DeliveryStore.getInstance().getItemByFullPathAndFolder(parsed.fullPath, folderPath);
+            if (existingItem != null && (existingItem.getStatus() == DeliveryItem.Status.DELIVERED || existingItem.getStatus() == DeliveryItem.Status.EXPIRED)) {
+                // Re-delivery: update delivery time and user
+                existingItem.reDeliver(username, sourceInstance);
+                reDeliveredItems.add(existingItem);
             } else {
-                alreadyDelivered = DeliveryStore.getInstance().getDeliveredItemsByFolder(folderPath).stream()
-                        .anyMatch(item -> item.getJobFullPath().equals(parsed.fullPath) && item.getStatus() == DeliveryItem.Status.DELIVERED);
-            }
-
-            if (!alreadyDelivered) {
                 DeliveryItem item = new DeliveryItem(jobName, parsed.fullPath, parsed.isFolder, folderPath, username, sourceInstance);
                 newItems.add(item);
             }
         }
 
-        if (newItems.isEmpty()) {
+        if (newItems.isEmpty() && reDeliveredItems.isEmpty()) {
             return errorResponse("No jobs selected");
         }
 
-        DeliveryStore.getInstance().addItems(newItems);
+        if (!newItems.isEmpty()) {
+            DeliveryStore.getInstance().addItems(newItems);
+        }
+
+        // Clean up expired items that were re-delivered
+        List<String> reDeliveredPaths = new ArrayList<>();
+        for (DeliveryItem item : newItems) {
+            reDeliveredPaths.add(item.getJobFullPath());
+        }
+        DeliveryStore.getInstance().removeExpiredByPaths(reDeliveredPaths);
+
+        // Save re-delivered items
+        if (!reDeliveredItems.isEmpty()) {
+            DeliveryStore.getInstance().saveToDisk();
+        }
 
         // Log audit
         List<String> paths = new ArrayList<>();
@@ -130,8 +141,12 @@ public class DeliveryService {
 
     /**
      * Get delivery list for a specific folder (non-recursive, only current directory).
+     * Auto-marks expired items before returning.
      */
     public HttpResponse getDeliveryList(@NonNull String folderPath, String statusFilter) {
+        // Check and mark expired items before querying
+        DeliveryStore.getInstance().checkAndMarkExpired();
+
         List<DeliveryItem> items;
         String effectiveFolder = folderPath != null ? folderPath : "";
 
