@@ -2,6 +2,8 @@
 
 Jenkins 任务晋级插件 - 从源 Jenkins 实例晋级（同步）任务到当前 Jenkins。
 
+> **版本**：`1.0.1-SNAPSHOT`（从 POM 元数据自动读取，可通过 `/job-promotion/doGetVersion` API 查询）
+
 ## 功能特性
 
 - **多源 Jenkins 实例配置**：在 Manage Jenkins 中配置多个源 Jenkins 实例（名称、地址、凭据），每个实例支持连接测试按钮验证认证
@@ -67,21 +69,38 @@ mvn clean package -DskipTests
 
 ```
 com.siruoren.jobpromotion
-├── JobPromotionGlobalConfig      # 全局配置（GlobalConfiguration）
-├── SourceJenkinsInstance         # 源 Jenkins 实例配置（Describable）
-├── JenkinsRemoteClient           # 远程 Jenkins HTTP 客户端
-├── PromotionService              # 晋级服务核心逻辑
-├── PromotionThreadPool           # 共享线程池 + 安全上下文传播
-├── PromotionResult               # 晋级结果模型
-├── RemoteJobInfo                 # 远程任务信息模型
-├── RootPromotionAction           # 根目录 Action（RootAction）
-├── FolderPromotionAction         # 文件夹 Action
-├── FolderPromotionActionFactory  # Folder Action 工厂（TransientActionFactory）
-├── AuditLogEntry                 # 审计日志条目模型
-├── AuditLogService               # 审计日志服务（持久化 + 保留策略）
-├── JsonResponse                  # JSON 成功响应
-└── JsonResponseerror             # JSON 错误响应
+├── engine/                           # 核心引擎层
+│   └── PromotionEngine               # 晋级逻辑引擎（文件夹同步、任务晋级）
+├── service/                          # 业务服务层
+│   └── DeliveryService               # 交付业务逻辑（交付、撤销、回调）
+├── util/                             # 工具层
+│   ├── JsonResponseUtil              # JSON 响应构建（合并原 JsonResponse/JsonResponseerror）
+│   ├── XmlUtil                       # XML 清理（XXE 防护、触发器清理）
+│   ├── PathUtil                      # 路径工具（路径遍历防护、路径解析）
+│   └── VersionUtil                   # 版本读取（从 POM 元数据）
+├── JobPromotionGlobalConfig          # 全局配置（GlobalConfiguration）
+├── SourceJenkinsInstance             # 源 Jenkins 实例配置（Describable）
+├── JenkinsRemoteClient               # 远程 Jenkins HTTP 客户端
+├── PromotionService                  # 晋级服务门面（委托给 PromotionEngine）
+├── PromotionThreadPool               # 共享线程池 + 安全上下文传播
+├── PromotionResult                   # 晋级结果模型
+├── RemoteJobInfo                     # 远程任务信息模型
+├── DeliveryItem                      # 交付项模型
+├── DeliveryStore                     # 交付项持久化存储
+├── RootPromotionAction               # 根目录 Action（RootAction）
+├── FolderPromotionAction             # 文件夹 Action
+├── FolderPromotionActionFactory      # Folder Action 工厂（TransientActionFactory）
+├── AuditLogEntry                     # 审计日志条目模型
+└── AuditLogService                   # 审计日志服务（持久化 + 保留策略）
 ```
+
+### 安全特性
+
+- **XXE 防护**：XML 解析禁用外部实体和 DTD 加载
+- **路径遍历防护**：拒绝 `..`、null 字节、绝对路径等恶意路径输入
+- **线程安全**：修复 `SimpleDateFormat` 静态实例线程安全问题
+- **超时保护**：晋级任务 5 分钟超时限制，防止线程阻塞
+- **权限控制**：所有 API 端点均需权限验证（`@RequirePOST` + 权限检查）
 
 ## License
 

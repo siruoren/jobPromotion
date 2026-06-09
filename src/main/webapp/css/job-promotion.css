@@ -1,5 +1,96 @@
 #job-promotion-container {
-    max-width: 1200px;
+    max-width: 100%;
+}
+
+/* Two-column layout */
+.jp-two-columns {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.jp-column {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--surface, #fafafa);
+}
+
+.jp-column-header {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border, #ddd);
+}
+
+.jp-column-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.jp-column-delivery .jp-column-header {
+    border-bottom-color: var(--blue, #2196f3);
+}
+
+.jp-column-promotion .jp-column-header {
+    border-bottom-color: var(--green, #4caf50);
+}
+
+.jp-section {
+    margin-bottom: 16px;
+}
+
+.jp-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.jp-section-header h3 {
+    margin: 0;
+    font-size: 1.05em;
+}
+
+.jp-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.jp-form-item {
+    margin-bottom: 8px;
+}
+
+.jp-form-desc {
+    color: var(--text-color-secondary, #666);
+    font-size: 0.85em;
+    margin-top: 2px;
+    margin-left: 20px;
+}
+
+.jp-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.jp-column .jenkins-table-wrap {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.jp-column .jenkins-table {
+    font-size: 0.9em;
+}
+
+.jp-column .jenkins-table th,
+.jp-column .jenkins-table td {
+    padding: 6px 8px;
 }
 
 #job-promotion-container .jenkins-form-row {
@@ -80,6 +171,21 @@
     border-top: 1px solid var(--border, #ddd);
 }
 
+.jp-status-delivered {
+    color: var(--blue, #2196f3);
+    font-weight: bold;
+}
+
+.jp-status-promoted {
+    color: var(--green, #4caf50);
+    font-weight: bold;
+}
+
+.jp-status-cancelled {
+    color: var(--text-color-secondary, #999);
+    font-weight: bold;
+}
+
 .jp-status-success {
     color: var(--green, #4caf50);
     font-weight: bold;
@@ -93,6 +199,24 @@
 .jp-status-skipped {
     color: var(--yellow, #ff9800);
     font-weight: bold;
+}
+
+.jenkins-button--danger {
+    background-color: var(--red, #f44336) !important;
+    color: #fff !important;
+    border-color: var(--red, #f44336) !important;
+}
+
+.jenkins-button--danger:hover {
+    background-color: var(--red-dark, #d32f2f) !important;
+}
+
+#deliveryListSection {
+    margin-top: 24px;
+}
+
+#deliveryListSection .jenkins-section-header {
+    margin-bottom: 12px;
 }
 
 .jenkins-toolbar {

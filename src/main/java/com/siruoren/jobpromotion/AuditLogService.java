@@ -2,12 +2,12 @@ package com.siruoren.jobpromotion;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +28,7 @@ public class AuditLogService {
         if (!pluginDir.exists()) {
             pluginDir.mkdirs();
         }
-        this.storageFile = new File(pluginDir, "audit-logs.dat");
+        this.storageFile = new File(pluginDir, "audit-logs.json");
         loadFromDisk();
         cleanOldLogs();
     }
@@ -71,6 +71,47 @@ public class AuditLogService {
                 successCount,
                 failureCount,
                 skippedCount
+        );
+
+        logs.add(entry);
+        saveToDisk();
+    }
+
+    /**
+     * Log a delivery action.
+     */
+    public void logDelivery(@NonNull String username, String sourceInstance,
+                             @NonNull List<String> jobPaths) {
+        AuditLogEntry entry = new AuditLogEntry(
+                System.currentTimeMillis(),
+                username,
+                "DELIVER",
+                sourceInstance != null ? sourceInstance : "",
+                new ArrayList<>(jobPaths),
+                false,
+                jobPaths.size(),
+                0,
+                0
+        );
+
+        logs.add(entry);
+        saveToDisk();
+    }
+
+    /**
+     * Log a cancel delivery action.
+     */
+    public void logCancelDelivery(@NonNull String username, @NonNull List<String> ids) {
+        AuditLogEntry entry = new AuditLogEntry(
+                System.currentTimeMillis(),
+                username,
+                "CANCEL_DELIVERY",
+                "",
+                new ArrayList<>(ids),
+                false,
+                ids.size(),
+                0,
+                0
         );
 
         logs.add(entry);
@@ -122,32 +163,35 @@ public class AuditLogService {
 
     private void saveToDisk() {
         try {
+            JSONArray arr;
             synchronized (logs) {
-                try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(storageFile))) {
-                    oos.writeObject(new ArrayList<>(logs));
-                }
+                arr = AuditLogEntry.toJsonArray(new ArrayList<>(logs));
+            }
+            try (FileOutputStream fos = new FileOutputStream(storageFile)) {
+                fos.write(arr.toString().getBytes("UTF-8"));
             }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to save audit logs to disk", e);
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void loadFromDisk() {
         if (!storageFile.exists()) {
             return;
         }
         try {
-            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(storageFile))) {
-                Object obj = ois.readObject();
-                if (obj instanceof List) {
-                    List<?> loaded = (List<?>) obj;
-                    logs.clear();
-                    for (Object item : loaded) {
-                        if (item instanceof AuditLogEntry) {
-                            logs.add((AuditLogEntry) item);
-                        }
-                    }
+            byte[] bytes;
+            try (FileInputStream fis = new FileInputStream(storageFile)) {
+                bytes = fis.readAllBytes();
+            }
+            String json = new String(bytes, "UTF-8");
+            JSONArray arr = JSONArray.fromObject(json);
+            logs.clear();
+            for (int i = 0; i < arr.size(); i++) {
+                JSONObject obj = arr.getJSONObject(i);
+                AuditLogEntry entry = AuditLogEntry.fromJson(obj);
+                if (entry != null) {
+                    logs.add(entry);
                 }
             }
         } catch (Exception e) {

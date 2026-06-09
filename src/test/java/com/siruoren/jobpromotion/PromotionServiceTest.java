@@ -1,18 +1,11 @@
 package com.siruoren.jobpromotion;
 
-import org.junit.Before;
+import com.siruoren.jobpromotion.util.XmlUtil;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class PromotionServiceTest {
-
-    private PromotionService service;
-
-    @Before
-    public void setUp() {
-        service = new PromotionService();
-    }
 
     @Test
     public void testCleanConfigXmlRemovesTriggers() {
@@ -29,9 +22,8 @@ public class PromotionServiceTest {
                 + "<builders/>"
                 + "</project>";
 
-        String cleaned = service.cleanConfigXml(configXml);
+        String cleaned = XmlUtil.cleanJobConfigXml(configXml);
         assertNotNull(cleaned);
-        // triggers tag content should be cleared
         assertTrue(cleaned.contains("<triggers/>") || cleaned.contains("<triggers />")
                 || !cleaned.contains("TimerTrigger") && !cleaned.contains("SCMTrigger"));
     }
@@ -46,7 +38,7 @@ public class PromotionServiceTest {
                 + "</hudson.plugins.buildmonitor.BuildMonitor>"
                 + "</project>";
 
-        String cleaned = service.cleanConfigXml(configXml);
+        String cleaned = XmlUtil.cleanJobConfigXml(configXml);
         assertNotNull(cleaned);
         assertFalse("BuildMonitor tag should be removed", cleaned.contains("BuildMonitor"));
     }
@@ -62,7 +54,7 @@ public class PromotionServiceTest {
                 + "</builders>"
                 + "</project>";
 
-        String cleaned = service.cleanConfigXml(configXml);
+        String cleaned = XmlUtil.cleanJobConfigXml(configXml);
         assertNotNull(cleaned);
         assertTrue(cleaned.contains("echo hello"));
         assertTrue(cleaned.contains("Test Job"));
@@ -71,34 +63,74 @@ public class PromotionServiceTest {
     @Test
     public void testCleanConfigXmlHandlesInvalidXml() {
         String invalidXml = "this is not xml at all <><><";
-        String cleaned = service.cleanConfigXml(invalidXml);
-        // Should return the original (or cleaned garbled chars) without throwing
+        String cleaned = XmlUtil.cleanJobConfigXml(invalidXml);
         assertNotNull(cleaned);
     }
 
     @Test
     public void testCleanConfigXmlCleansGarbledChars() {
-        // Test that common garbled characters are cleaned
         String configXml = "<project><description>Test\u0000Job</description></project>";
-        String cleaned = service.cleanConfigXml(configXml);
+        String cleaned = XmlUtil.cleanJobConfigXml(configXml);
         assertNotNull(cleaned);
         assertFalse("Null character should be removed", cleaned.contains("\0"));
     }
 
     @Test
     public void testCleanConfigXmlEmptyInput() {
-        String cleaned = service.cleanConfigXml("");
+        String cleaned = XmlUtil.cleanJobConfigXml("");
         assertNotNull(cleaned);
     }
 
     @Test
+    public void testCleanFolderConfigXmlPreservesContent() {
+        String configXml = "<com.cloudbees.hudson.plugins.folder.Folder>"
+                + "<description>My Folder</description>"
+                + "<properties/>"
+                + "</com.cloudbees.hudson.plugins.folder.Folder>";
+
+        String cleaned = XmlUtil.cleanFolderConfigXml(configXml);
+        assertNotNull(cleaned);
+        assertTrue(cleaned.contains("My Folder"));
+    }
+
+    @Test
+    public void testCleanFolderConfigXmlRemovesGarbledChars() {
+        String configXml = "<folder><description>Test\u0001Folder</description></folder>";
+        String cleaned = XmlUtil.cleanFolderConfigXml(configXml);
+        assertNotNull(cleaned);
+        assertFalse("Control character should be removed", cleaned.contains("\u0001"));
+    }
+
+    @Test
+    public void testCleanGarbledCharsNull() {
+        String result = XmlUtil.cleanGarbledChars(null);
+        assertEquals("", result);
+    }
+
+    @Test
+    public void testCleanJobConfigXmlRemovesBuildDiscarder() {
+        String configXml = "<project>"
+                + "<description>Test</description>"
+                + "<buildDiscarder>"
+                + "  <strategy class=\"hudson.tasks.LogRotator\">"
+                + "    <daysToKeep>30</daysToKeep>"
+                + "  </strategy>"
+                + "</buildDiscarder>"
+                + "<builders/>"
+                + "</project>";
+
+        String cleaned = XmlUtil.cleanJobConfigXml(configXml);
+        assertNotNull(cleaned);
+        assertFalse("LogRotator should be removed from buildDiscarder", cleaned.contains("LogRotator"));
+    }
+
+    @Test
     public void testFetchRemoteJobsWithoutConfigThrows() {
-        // Without Jenkins running, getInstanceByName should fail or return null
+        PromotionService service = new PromotionService();
         try {
             service.fetchRemoteJobs("", "nonexistent-instance");
             fail("Should throw exception when no source instance configured");
         } catch (Exception e) {
-            // Expected - either IllegalStateException or NullPointerException
             assertTrue(e instanceof IllegalStateException || e instanceof NullPointerException);
         }
     }

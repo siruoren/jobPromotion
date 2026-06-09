@@ -1,9 +1,13 @@
 package com.siruoren.jobpromotion;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.siruoren.jobpromotion.engine.PromotionEngine;
+import com.siruoren.jobpromotion.service.DeliveryService;
+import com.siruoren.jobpromotion.util.JsonResponseUtil;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Action;
 import hudson.model.Item;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
@@ -57,22 +61,79 @@ public class FolderPromotionAction implements Action {
         return folder.getFullName();
     }
 
-    /**
-     * Return the list of configured source Jenkins instances for the frontend dropdown.
-     */
+    // ==================== Source Jenkins APIs (交付相关) ====================
+
+    @RequirePOST
+    public HttpResponse doDeliverJobs(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.CREATE);
+        folder.checkPermission(Item.CONFIGURE);
+
+        String jobsParam = req.getParameter("jobs");
+        String sourceInstance = req.getParameter("sourceInstance");
+        return DeliveryService.getInstance().deliverJobs(jobsParam, folder.getFullName(), sourceInstance);
+    }
+
+    @RequirePOST
+    public HttpResponse doCancelDelivery(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.CREATE);
+        folder.checkPermission(Item.CONFIGURE);
+
+        String idsParam = req.getParameter("ids");
+        return DeliveryService.getInstance().cancelDelivery(idsParam);
+    }
+
+    @RequirePOST
+    public HttpResponse doGetDeliveryList(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.READ);
+
+        String statusFilter = req.getParameter("status");
+        return DeliveryService.getInstance().getDeliveryList(folder.getFullName(), statusFilter);
+    }
+
+    // ==================== Callback API ====================
+
+    @RequirePOST
+    public HttpResponse doPromotionCallback(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.CREATE);
+
+        String jobPathsParam = req.getParameter("jobPaths");
+        String promotedBy = req.getParameter("promotedBy");
+        return DeliveryService.getInstance().handlePromotionCallback(jobPathsParam, promotedBy);
+    }
+
+    // ==================== Promotion APIs ====================
+
     @RequirePOST
     public HttpResponse doGetInstances() throws IOException, ServletException {
         folder.checkPermission(Item.CREATE);
+        return JsonResponseUtil.success(DeliveryService.getInstance().getInstancesAsJson());
+    }
 
-        JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
-        net.sf.json.JSONArray arr = new net.sf.json.JSONArray();
-        for (SourceJenkinsInstance inst : config.getInstances()) {
-            net.sf.json.JSONObject obj = new net.sf.json.JSONObject();
-            obj.put("name", inst.getName() != null ? inst.getName() : "");
-            obj.put("url", inst.getUrl() != null ? inst.getUrl() : "");
-            arr.add(obj);
+    @RequirePOST
+    public HttpResponse doListLocalJobs(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.READ);
+
+        try {
+            // Recursively list all jobs and sub-folders under current folder
+            List<RemoteJobInfo> jobs = new ArrayList<>();
+            listJobsInFolder(folder, folder.getFullName(), jobs);
+            return JsonResponseUtil.success(jobs);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to list local jobs for folder: " + folder.getFullName(), e);
+            return JsonResponseUtil.error(e.getMessage());
         }
-        return new JsonResponse(arr);
+    }
+
+    private void listJobsInFolder(Folder f, String currentPath, List<RemoteJobInfo> jobs) {
+        for (Item item : f.getItems()) {
+            String itemPath = currentPath.isEmpty() ? item.getName() : currentPath + "/" + item.getName();
+            if (item instanceof Folder) {
+                jobs.add(new RemoteJobInfo(item.getName(), itemPath, true, null));
+                listJobsInFolder((Folder) item, itemPath, jobs);
+            } else if (item instanceof hudson.model.Job) {
+                jobs.add(new RemoteJobInfo(item.getName(), itemPath, false, null));
+            }
+        }
     }
 
     @RequirePOST
@@ -80,16 +141,25 @@ public class FolderPromotionAction implements Action {
         folder.checkPermission(Item.CREATE);
         folder.checkPermission(Item.CONFIGURE);
 
-        String folderPath = folder.getFullName();
-
         try {
-            PromotionService service = new PromotionService();
-            List<RemoteJobInfo> jobs = service.fetchRemoteJobs(folderPath, sourceInstance);
-            return new JsonResponse(jobs);
+            List<RemoteJobInfo> jobs = PromotionEngine.getInstance().fetchRemoteJobs(folder.getFullName(), sourceInstance);
+            return JsonResponseUtil.success(jobs);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to list remote jobs for folder: " + folder.getFullName(), e);
-            return new JsonResponseerror(e.getMessage());
+            return JsonResponseUtil.error(e.getMessage());
         }
+    }
+
+    @RequirePOST
+    public HttpResponse doFetchSourceDeliveryList(StaplerRequest2 req) throws IOException, ServletException {
+        folder.checkPermission(Item.READ);
+
+        String sourceInstance = req.getParameter("sourceInstance");
+        String folderPath = req.getParameter("folderPath");
+        if (folderPath == null || folderPath.trim().isEmpty()) {
+            folderPath = folder.getFullName();
+        }
+        return DeliveryService.getInstance().fetchSourceDeliveryList(sourceInstance, folderPath);
     }
 
     @RequirePOST
@@ -102,7 +172,7 @@ public class FolderPromotionAction implements Action {
         String sourceInstance = req.getParameter("sourceInstance");
 
         if (jobsParam == null || jobsParam.trim().isEmpty()) {
-            return new JsonResponseerror(Messages.FolderPromotionAction_noJobsSelected());
+            return JsonResponseUtil.error(Messages.FolderPromotionAction_noJobsSelected());
         }
 
         String[] jobPaths = jobsParam.split(",");
@@ -115,24 +185,31 @@ public class FolderPromotionAction implements Action {
         }
 
         if (jobFullPaths.isEmpty()) {
-            return new JsonResponseerror(Messages.FolderPromotionAction_noJobsSelected());
+            return JsonResponseUtil.error(Messages.FolderPromotionAction_noJobsSelected());
         }
 
-        PromotionService service = new PromotionService();
         Future<Map<String, PromotionResult>> future = PromotionThreadPool.getInstance().submitWithAuth(() -> {
-            Map<String, PromotionResult> results = service.promoteJobs(jobFullPaths, folder, forceUpdate, folder.getFullName(), sourceInstance);
-            // Log audit
-            String username = jenkins.model.Jenkins.getAuthentication2().getName();
+            Map<String, PromotionResult> results = PromotionEngine.getInstance().promoteJobs(
+                    jobFullPaths, folder, forceUpdate, folder.getFullName(), sourceInstance);
+
+            String username = Jenkins.getAuthentication2().getName();
             AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results);
+
+            DeliveryService.getInstance().callbackSourceJenkins(sourceInstance, jobFullPaths, username, results);
+
             return results;
         });
 
         try {
-            Map<String, PromotionResult> results = future.get();
-            return new JsonResponse(results);
+            Map<String, PromotionResult> results = future.get(5, java.util.concurrent.TimeUnit.MINUTES);
+            return JsonResponseUtil.success(results);
+        } catch (java.util.concurrent.TimeoutException e) {
+            LOGGER.log(Level.WARNING, "Promotion task timed out for folder: " + folder.getFullName());
+            future.cancel(true);
+            return JsonResponseUtil.error("Promotion task timed out after 5 minutes");
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Promotion task failed for folder: " + folder.getFullName(), e);
-            return new JsonResponseerror(e.getMessage());
+            return JsonResponseUtil.error(e.getMessage());
         }
     }
 }

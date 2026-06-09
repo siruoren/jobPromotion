@@ -12,7 +12,7 @@
 
     <groupId>com.siruoren</groupId>
     <artifactId>job-promotion</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
     <name>Job Promotion Plugin</name>

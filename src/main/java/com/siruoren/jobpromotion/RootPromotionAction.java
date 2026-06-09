@@ -1,11 +1,15 @@
 package com.siruoren.jobpromotion;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
+import com.siruoren.jobpromotion.engine.PromotionEngine;
+import com.siruoren.jobpromotion.service.DeliveryService;
+import com.siruoren.jobpromotion.util.JsonResponseUtil;
+import com.siruoren.jobpromotion.util.VersionUtil;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.model.RootAction;
 import jenkins.model.Jenkins;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
@@ -46,22 +50,120 @@ public class RootPromotionAction implements RootAction {
         return null;
     }
 
-    /**
-     * Return the list of configured source Jenkins instances for the frontend dropdown.
-     */
+    // ==================== Version API ====================
+
+    @RequirePOST
+    public HttpResponse doGetVersion() throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.READ);
+        net.sf.json.JSONObject result = new net.sf.json.JSONObject();
+        result.put("version", VersionUtil.getVersion());
+        return JsonResponseUtil.success(result);
+    }
+
+    // ==================== Delivery APIs ====================
+
+    @RequirePOST
+    public HttpResponse doGetDeliveryList(StaplerRequest2 req) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+
+        String folderPath = req.getParameter("folderPath");
+        String statusFilter = req.getParameter("status");
+        return DeliveryService.getInstance().getDeliveryList(
+                folderPath != null ? folderPath : "", statusFilter);
+    }
+
+    @RequirePOST
+    public HttpResponse doPromotionCallback(StaplerRequest2 req) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+
+        String jobPathsParam = req.getParameter("jobPaths");
+        String promotedBy = req.getParameter("promotedBy");
+        return DeliveryService.getInstance().handlePromotionCallback(jobPathsParam, promotedBy);
+    }
+
+    // ==================== Source Jenkins APIs ====================
+
+    @RequirePOST
+    public HttpResponse doDeliverJobs(StaplerRequest2 req) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+
+        String jobsParam = req.getParameter("jobs");
+        String sourceInstance = req.getParameter("sourceInstance");
+        return DeliveryService.getInstance().deliverJobs(jobsParam, "", sourceInstance);
+    }
+
+    @RequirePOST
+    public HttpResponse doCancelDelivery(StaplerRequest2 req) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+
+        String idsParam = req.getParameter("ids");
+        return DeliveryService.getInstance().cancelDelivery(idsParam);
+    }
+
+    // ==================== Remote Jenkins APIs ====================
+
+    @RequirePOST
+    public HttpResponse doFetchSourceDeliveryList(StaplerRequest2 req) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+
+        String sourceInstance = req.getParameter("sourceInstance");
+        String folderPath = req.getParameter("folderPath");
+        return DeliveryService.getInstance().fetchSourceDeliveryList(sourceInstance, folderPath != null ? folderPath : "");
+    }
+
+    // ==================== Instance & Job Listing APIs ====================
+
     @RequirePOST
     public HttpResponse doGetInstances() throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+        return JsonResponseUtil.success(DeliveryService.getInstance().getInstancesAsJson());
+    }
 
-        JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
-        JSONArray arr = new JSONArray();
-        for (SourceJenkinsInstance inst : config.getInstances()) {
-            JSONObject obj = new JSONObject();
-            obj.put("name", inst.getName() != null ? inst.getName() : "");
-            obj.put("url", inst.getUrl() != null ? inst.getUrl() : "");
-            arr.add(obj);
+    @RequirePOST
+    public HttpResponse doListLocalJobs(StaplerRequest2 req) throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.READ);
+
+        String folderPath = req.getParameter("folderPath");
+
+        try {
+            // Recursively list all jobs and sub-folders
+            List<RemoteJobInfo> jobs = new ArrayList<>();
+            if (folderPath != null && !folderPath.trim().isEmpty()) {
+                Item item = Jenkins.get().getItemByFullName(folderPath);
+                if (item instanceof Folder) {
+                    listJobsInFolder((Folder) item, folderPath, jobs);
+                }
+            } else {
+                // Root level: load all Jenkins jobs recursively
+                for (Item item : Jenkins.get().getAllItems()) {
+                    String itemPath = item.getFullName();
+                    if (item instanceof Folder) {
+                        if (!itemPath.contains("/")) {
+                            jobs.add(new RemoteJobInfo(item.getName(), itemPath, true, null));
+                        }
+                        listJobsInFolder((Folder) item, itemPath, jobs);
+                    } else if (item instanceof hudson.model.Job) {
+                        jobs.add(new RemoteJobInfo(item.getName(), itemPath, false, null));
+                    }
+                }
+            }
+            return JsonResponseUtil.success(jobs);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to list local jobs", e);
+            return JsonResponseUtil.error(e.getMessage());
         }
-        return new JsonResponse(arr);
+    }
+
+    private void listJobsInFolder(Folder f, String currentPath, List<RemoteJobInfo> jobs) {
+        for (Item item : f.getItems()) {
+            String itemPath = currentPath.isEmpty() ? item.getName() : currentPath + "/" + item.getName();
+            if (item instanceof Folder) {
+                jobs.add(new RemoteJobInfo(item.getName(), itemPath, true, null));
+                listJobsInFolder((Folder) item, itemPath, jobs);
+            } else if (item instanceof hudson.model.Job) {
+                jobs.add(new RemoteJobInfo(item.getName(), itemPath, false, null));
+            }
+        }
     }
 
     @RequirePOST
@@ -70,12 +172,11 @@ public class RootPromotionAction implements RootAction {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
         try {
-            PromotionService service = new PromotionService();
-            List<RemoteJobInfo> jobs = service.fetchRemoteJobs(folderPath, sourceInstance);
-            return new JsonResponse(jobs);
+            List<RemoteJobInfo> jobs = PromotionEngine.getInstance().fetchRemoteJobs(folderPath, sourceInstance);
+            return JsonResponseUtil.success(jobs);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to list remote jobs", e);
-            return new JsonResponseerror(e.getMessage());
+            return JsonResponseUtil.error(e.getMessage());
         }
     }
 
@@ -88,7 +189,7 @@ public class RootPromotionAction implements RootAction {
         String sourceInstance = req.getParameter("sourceInstance");
 
         if (jobsParam == null || jobsParam.trim().isEmpty()) {
-            return new JsonResponseerror(Messages.RootPromotionAction_noJobsSelected());
+            return JsonResponseUtil.error(Messages.RootPromotionAction_noJobsSelected());
         }
 
         String[] jobPaths = jobsParam.split(",");
@@ -101,30 +202,36 @@ public class RootPromotionAction implements RootAction {
         }
 
         if (jobFullPaths.isEmpty()) {
-            return new JsonResponseerror(Messages.RootPromotionAction_noJobsSelected());
+            return JsonResponseUtil.error(Messages.RootPromotionAction_noJobsSelected());
         }
 
-        PromotionService service = new PromotionService();
         Future<Map<String, PromotionResult>> future = PromotionThreadPool.getInstance().submitWithAuth(() -> {
-            Map<String, PromotionResult> results = service.promoteJobs(jobFullPaths, Jenkins.get(), forceUpdate, null, sourceInstance);
-            // Log audit
+            Map<String, PromotionResult> results = PromotionEngine.getInstance().promoteJobs(
+                    jobFullPaths, Jenkins.get(), forceUpdate, null, sourceInstance);
+
             String username = Jenkins.getAuthentication2().getName();
             AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results);
+
+            DeliveryService.getInstance().callbackSourceJenkins(sourceInstance, jobFullPaths, username, results);
+
             return results;
         });
 
         try {
-            Map<String, PromotionResult> results = future.get();
-            return new JsonResponse(results);
+            Map<String, PromotionResult> results = future.get(5, java.util.concurrent.TimeUnit.MINUTES);
+            return JsonResponseUtil.success(results);
+        } catch (java.util.concurrent.TimeoutException e) {
+            LOGGER.log(Level.WARNING, "Promotion task timed out");
+            future.cancel(true);
+            return JsonResponseUtil.error("Promotion task timed out after 5 minutes");
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Promotion task failed", e);
-            return new JsonResponseerror(e.getMessage());
+            return JsonResponseUtil.error(e.getMessage());
         }
     }
 
-    /**
-     * Get audit logs for the audit log page.
-     */
+    // ==================== Audit Log APIs ====================
+
     @RequirePOST
     public HttpResponse doGetAuditLogs(StaplerRequest2 req) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
@@ -148,18 +255,15 @@ public class RootPromotionAction implements RootAction {
 
         int retentionDays = JobPromotionGlobalConfig.get().getAuditLogRetentionDays();
 
-        JSONObject result = new JSONObject();
+        net.sf.json.JSONObject result = new net.sf.json.JSONObject();
         result.put("logs", AuditLogEntry.toJsonArray(logs));
         result.put("total", total);
         result.put("page", page);
         result.put("pageSize", pageSize);
         result.put("retentionDays", retentionDays);
-        return new JsonResponse(result);
+        return JsonResponseUtil.success(result);
     }
 
-    /**
-     * Update audit log retention days.
-     */
     @RequirePOST
     public HttpResponse doUpdateAuditLogRetention(StaplerRequest2 req) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
@@ -171,10 +275,10 @@ public class RootPromotionAction implements RootAction {
                 retentionDays = Integer.parseInt(retentionDaysParam);
             }
         } catch (NumberFormatException e) {
-            return new JsonResponseerror("Invalid retention days value");
+            return JsonResponseUtil.error("Invalid retention days value");
         }
         if (retentionDays < 1) {
-            return new JsonResponseerror("Retention days must be at least 1");
+            return JsonResponseUtil.error("Retention days must be at least 1");
         }
 
         JobPromotionGlobalConfig config = JobPromotionGlobalConfig.get();
@@ -183,8 +287,8 @@ public class RootPromotionAction implements RootAction {
 
         AuditLogService.getInstance().cleanOldLogs();
 
-        JSONObject result = new JSONObject();
+        net.sf.json.JSONObject result = new net.sf.json.JSONObject();
         result.put("retentionDays", retentionDays);
-        return new JsonResponse(result);
+        return JsonResponseUtil.success(result);
     }
 }
