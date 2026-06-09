@@ -135,12 +135,13 @@ public class RootPromotionAction implements RootAction {
                 }
             } else {
                 // Root level: load all Jenkins jobs recursively
+                // Only iterate top-level items, then recurse into folders
                 for (Item item : Jenkins.get().getAllItems()) {
                     String itemPath = item.getFullName();
+                    // Skip nested items - they will be visited via folder recursion
+                    if (itemPath.contains("/")) continue;
                     if (item instanceof Folder) {
-                        if (!itemPath.contains("/")) {
-                            jobs.add(new RemoteJobInfo(item.getName(), itemPath, true, null));
-                        }
+                        jobs.add(new RemoteJobInfo(item.getName(), itemPath, true, null));
                         listJobsInFolder((Folder) item, itemPath, jobs);
                     } else if (item instanceof hudson.model.Job) {
                         jobs.add(new RemoteJobInfo(item.getName(), itemPath, false, null));
