@@ -327,7 +327,7 @@
         deliveryTableBody.innerHTML = "";
 
         if (items.length === 0) {
-            deliveryTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">' + (getMessage("noDeliveryItems") || "No delivery items") + '</td></tr>';
+            deliveryTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">' + (getMessage("noDeliveryItems") || "No delivery items") + '</td></tr>';
             return;
         }
 
@@ -364,7 +364,9 @@
                 "<td>" + escapeHtml(item.jobFullPath) + "</td>" +
                 "<td>" + typeLabel + "</td>" +
                 "<td class='" + statusClass + "'>" + statusText + "</td>" +
+                "<td>" + escapeHtml(item.deliveredBy || "") + "</td>" +
                 "<td>" + escapeHtml(item.formattedDeliveredAt) + "</td>" +
+                (item.status === "PROMOTED" ? "<td>" + escapeHtml(item.promotedBy || "") + "</td>" : "<td>-</td>") +
                 (item.status === "PROMOTED" ? "<td>" + escapeHtml(item.formattedPromotedAt) + "</td>" : "<td>-</td>");
 
             deliveryTableBody.appendChild(tr);
@@ -495,7 +497,7 @@
         remoteJobTableBody.innerHTML = "";
 
         if (items.length === 0) {
-            remoteJobTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">' + (getMessage("noDeliveryItems") || "No items") + '</td></tr>';
+            remoteJobTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">' + (getMessage("noDeliveryItems") || "No items") + '</td></tr>';
             return;
         }
 
@@ -534,6 +536,7 @@
                 "<td>" + escapeHtml(item.jobFullPath) + "</td>" +
                 "<td>" + typeLabel + "</td>" +
                 "<td class='" + statusClass + "'>" + statusText + "</td>" +
+                "<td>" + escapeHtml(item.deliveredBy || "") + "</td>" +
                 "<td>" + escapeHtml(item.formattedDeliveredAt || "") + "</td>";
 
             remoteJobTableBody.appendChild(tr);
@@ -843,6 +846,8 @@
                         "<th>" + getMessage("auditLog-user") + "</th>" +
                         "<th>" + getMessage("auditLog-instance") + "</th>" +
                         "<th>" + getMessage("auditLog-jobs") + "</th>" +
+                        "<th>" + (getMessage("deliveredBy") || "Delivered By") + "</th>" +
+                        "<th>" + (getMessage("promotedBy") || "Promoted By") + "</th>" +
                         "<th>" + getMessage("auditLog-result") + "</th>" +
                         "</tr></thead><tbody>";
 
@@ -853,6 +858,8 @@
                             "<td>" + escapeHtml(log.username || "") + "</td>" +
                             "<td>" + escapeHtml(log.sourceInstance || "") + "</td>" +
                             "<td>" + escapeHtml(log.jobPathsSummary || "") + "</td>" +
+                            "<td>" + escapeHtml(log.deliveredBy || "") + "</td>" +
+                            "<td>" + escapeHtml(log.promotedBy || "") + "</td>" +
                             "<td>" + actionLabel + " " + (log.successCount || 0) + "/" + (log.failureCount || 0) + "/" + (log.skippedCount || 0) + "</td>" +
                             "</tr>";
                     });

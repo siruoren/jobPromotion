@@ -193,7 +193,9 @@ public class FolderPromotionAction implements Action {
                     jobFullPaths, folder, forceUpdate, folder.getFullName(), sourceInstance);
 
             String username = Jenkins.getAuthentication2().getName();
-            AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results);
+            // Collect deliveredBy from delivery items
+            String deliveredBy = DeliveryStore.getInstance().getDeliveredByForJobs(jobFullPaths);
+            AuditLogService.getInstance().logPromotion(username, sourceInstance, jobFullPaths, forceUpdate, results, deliveredBy);
 
             DeliveryService.getInstance().callbackSourceJenkins(sourceInstance, jobFullPaths, username, results);
 

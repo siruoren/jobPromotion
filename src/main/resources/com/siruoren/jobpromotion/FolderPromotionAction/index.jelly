@@ -75,7 +75,9 @@
                                             <th>${%jobPath}</th>
                                             <th>${%jobType}</th>
                                             <th>${%status}</th>
+                                            <th>${%deliveredBy}</th>
                                             <th>${%deliveredAt}</th>
+                                            <th>${%promotedBy}</th>
                                             <th>${%promotedAt}</th>
                                         </tr>
                                     </thead>
@@ -121,6 +123,7 @@
                                             <th>${%jobPath}</th>
                                             <th>${%jobType}</th>
                                             <th>${%status}</th>
+                                            <th>${%deliveredBy}</th>
                                             <th>${%deliveredAt}</th>
                                         </tr>
                                     </thead>
@@ -187,6 +190,8 @@
                     <span id="msg-statusCancelled">${%statusCancelled}</span>
                     <span id="msg-statusExpired">${%statusExpired}</span>
                     <span id="msg-noDeliveryItems">${%noDeliveryItems}</span>
+                    <span id="msg-deliveredBy">${%deliveredBy}</span>
+                    <span id="msg-promotedBy">${%promotedBy}</span>
                 </div>
             </div>
 

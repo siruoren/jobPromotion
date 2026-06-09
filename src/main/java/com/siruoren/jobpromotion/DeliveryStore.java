@@ -11,6 +11,7 @@ import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -283,6 +284,21 @@ public class DeliveryStore {
             }
         }
         return null;
+    }
+
+    /**
+     * Get comma-separated deliveredBy usernames for the given job paths (for audit logging).
+     */
+    public String getDeliveredByForJobs(@NonNull List<String> jobFullPaths) {
+        Set<String> deliveredBySet = new java.util.LinkedHashSet<>();
+        synchronized (items) {
+            for (DeliveryItem item : items) {
+                if (jobFullPaths.contains(item.getJobFullPath()) && item.getDeliveredBy() != null && !item.getDeliveredBy().isEmpty()) {
+                    deliveredBySet.add(item.getDeliveredBy());
+                }
+            }
+        }
+        return String.join(", ", deliveredBySet);
     }
 
     /**

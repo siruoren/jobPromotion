@@ -49,7 +49,8 @@ public class AuditLogService {
      */
     public void logPromotion(@NonNull String username, String sourceInstance,
                               @NonNull List<String> jobPaths, boolean forceUpdate,
-                              @NonNull Map<String, PromotionResult> results) {
+                              @NonNull Map<String, PromotionResult> results,
+                              String deliveredBy) {
         int successCount = 0;
         int failureCount = 0;
         int skippedCount = 0;
@@ -70,7 +71,9 @@ public class AuditLogService {
                 forceUpdate,
                 successCount,
                 failureCount,
-                skippedCount
+                skippedCount,
+                deliveredBy != null ? deliveredBy : "",
+                username
         );
 
         logs.add(entry);
@@ -91,7 +94,9 @@ public class AuditLogService {
                 false,
                 jobPaths.size(),
                 0,
-                0
+                0,
+                username,
+                ""
         );
 
         logs.add(entry);
@@ -111,7 +116,9 @@ public class AuditLogService {
                 false,
                 ids.size(),
                 0,
-                0
+                0,
+                "",
+                ""
         );
 
         logs.add(entry);
