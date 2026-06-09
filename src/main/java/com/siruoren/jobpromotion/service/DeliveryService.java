@@ -144,8 +144,9 @@ public class DeliveryService {
      * Auto-marks expired items before returning.
      */
     public HttpResponse getDeliveryList(@NonNull String folderPath, String statusFilter) {
-        // Check and mark expired items before querying
+        // Check and mark expired items, then clean old items
         DeliveryStore.getInstance().checkAndMarkExpired();
+        DeliveryStore.getInstance().cleanOldItems();
 
         List<DeliveryItem> items;
         String effectiveFolder = folderPath != null ? folderPath : "";

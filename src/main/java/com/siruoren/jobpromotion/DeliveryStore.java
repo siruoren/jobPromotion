@@ -34,6 +34,7 @@ public class DeliveryStore {
         }
         this.storageFile = new File(pluginDir, "delivery-items.json");
         loadFromDisk();
+        cleanOldItems();
     }
 
     public static DeliveryStore getInstance() {
@@ -165,6 +166,27 @@ public class DeliveryStore {
     }
 
     /**
+     * Clean delivery items older than the audit log retention days.
+     * Uses the same retention period as audit logs (configured in global settings).
+     * Only removes PROMOTED, CANCELLED, or EXPIRED items; never removes DELIVERED items.
+     */
+    public void cleanOldItems() {
+        int retentionDays = JobPromotionGlobalConfig.get().getAuditLogRetentionDays();
+        long cutoffTime = System.currentTimeMillis() - (long) retentionDays * 24 * 60 * 60 * 1000;
+
+        boolean removed;
+        synchronized (items) {
+            removed = items.removeIf(item ->
+                    item.getStatus() != DeliveryItem.Status.DELIVERED
+                            && item.getDeliveredAt() < cutoffTime);
+        }
+        if (removed) {
+            saveToDisk();
+            LOGGER.log(Level.INFO, "Cleaned delivery items older than " + retentionDays + " days");
+        }
+    }
+
+    /**
      * Get delivered items for a specific folder path (non-recursive, only current directory).
      * Returns DELIVERED status items (auto-marks expired items before querying).
      */
@@ -282,26 +304,6 @@ public class DeliveryStore {
             arr.add(item.toJson());
         }
         return arr;
-    }
-
-    /**
-     * Clean old cancelled items.
-     */
-    public void cleanOldItems() {
-        int retentionDays = JobPromotionGlobalConfig.get().getAuditLogRetentionDays();
-        long cutoffTime = System.currentTimeMillis() - (long) retentionDays * 24 * 60 * 60 * 1000;
-
-        synchronized (items) {
-            boolean removed = items.removeIf(item ->
-                    (item.getStatus() == DeliveryItem.Status.CANCELLED
-                            || (item.getStatus() == DeliveryItem.Status.PROMOTED && item.getPromotedAt() < cutoffTime))
-                            && item.getDeliveredAt() < cutoffTime
-            );
-            if (removed) {
-                saveToDisk();
-                LOGGER.log(Level.INFO, "Cleaned old delivery items");
-            }
-        }
     }
 
     public void saveToDisk() {
