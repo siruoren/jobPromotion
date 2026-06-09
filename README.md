@@ -68,6 +68,84 @@ mvn clean package -DskipTests
    - 点击"Promote"→ 确认 → 查看结果
 4. **审计日志**：根目录晋级页面点击"Audit Log"查看晋级操作记录，可设置日志保留天数
 
+## 任务交付晋级架构
+
+```mermaid
+flowchart TB
+    subgraph Source["源 Jenkins (Source)"]
+        SJ[源 Jenkins 任务]
+        SD[交付操作]
+        SJ --> SD
+    end
+
+    subgraph Delivery["交付层"]
+        DS[DeliveryStore<br/>交付项持久化]
+        DI[DeliveryItem<br/>交付项模型]
+        DSV[DeliveryService<br/>交付业务逻辑]
+    end
+
+    subgraph Target["目标 Jenkins (Target)"]
+        subgraph Root["根目录"]
+            RA[RootPromotionAction]
+            AL[AuditLogService<br/>审计日志]
+        end
+        subgraph Folder["文件夹目录"]
+            FA[FolderPromotionAction]
+        end
+        PE[PromotionEngine<br/>晋级引擎]
+        TJ[目标任务]
+    end
+
+    SD -->|交付任务| DSV
+    DSV -->|存储交付项| DS
+    DS -->|读取交付项| DI
+
+    RA -->|加载交付列表| DS
+    FA -->|加载交付列表| DS
+    RA -->|选择任务晋级| PE
+    FA -->|选择任务晋级| PE
+
+    PE -->|从源 Jenkins 获取配置| SJ
+    PE -->|创建/更新任务| TJ
+    PE -->|记录审计日志| AL
+
+    DI -->|状态流转| Status["DELIVERED → PROMOTED<br/>DELIVERED → EXPIRED<br/>EXPIRED → DELIVERED (重新交付)"]
+```
+
+### 交付晋级流程
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant S as 源 Jenkins
+    participant D as DeliveryService
+    participant DS as DeliveryStore
+    participant T as 目标 Jenkins
+    participant A as AuditLogService
+
+    Note over U,A: 阶段一：任务交付
+    U->>D: 交付任务
+    D->>S: 获取任务配置
+    D->>DS: 保存 DeliveryItem (DELIVERED)
+    D->>A: 记录交付日志 (deliveredBy=当前用户)
+
+    Note over U,A: 阶段二：任务晋级
+    U->>T: 加载交付列表
+    T->>DS: 查询当前目录交付项
+    DS-->>T: 返回交付列表 (含 deliveredBy)
+    U->>T: 选择任务并晋级
+    T->>S: 获取任务 XML 配置
+    T->>T: 创建/更新任务
+    T->>DS: 更新状态为 PROMOTED
+    T->>A: 记录晋级日志 (promotedBy=当前用户, deliveredBy=交付人)
+
+    Note over U,A: 阶段三：过期处理
+    DS->>DS: 检查交付超过30天未晋级
+    DS->>DS: 标记为 EXPIRED
+    U->>D: 重新交付过期任务
+    D->>DS: 更新状态为 DELIVERED，刷新交付时间
+```
+
 ## 技术架构
 
 ```
