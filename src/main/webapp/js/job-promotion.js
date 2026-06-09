@@ -533,7 +533,8 @@
                 "<td>" + escapeHtml(item.jobName) + "</td>" +
                 "<td>" + escapeHtml(item.jobFullPath) + "</td>" +
                 "<td>" + typeLabel + "</td>" +
-                "<td class='" + statusClass + "'>" + statusText + "</td>";
+                "<td class='" + statusClass + "'>" + statusText + "</td>" +
+                "<td>" + escapeHtml(item.formattedDeliveredAt || "") + "</td>";
 
             remoteJobTableBody.appendChild(tr);
         });

@@ -121,6 +121,7 @@
                                             <th>${%jobPath}</th>
                                             <th>${%jobType}</th>
                                             <th>${%status}</th>
+                                            <th>${%deliveredAt}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="remoteJobTableBody">
