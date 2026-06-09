@@ -189,6 +189,8 @@
                     <span id="msg-statusCancelled">${%statusCancelled}</span>
                     <span id="msg-statusExpired">${%statusExpired}</span>
                     <span id="msg-noDeliveryItems">${%noDeliveryItems}</span>
+                    <span id="msg-deliveredBy">${%deliveredBy}</span>
+                    <span id="msg-promotedBy">${%promotedBy}</span>
                     <span id="msg-auditLog-title">${%auditLogTitle}</span>
                     <span id="msg-auditLog-time">${%auditLogTime}</span>
                     <span id="msg-auditLog-user">${%auditLogUser}</span>

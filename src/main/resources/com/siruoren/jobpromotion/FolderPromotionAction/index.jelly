@@ -190,6 +190,8 @@
                     <span id="msg-statusCancelled">${%statusCancelled}</span>
                     <span id="msg-statusExpired">${%statusExpired}</span>
                     <span id="msg-noDeliveryItems">${%noDeliveryItems}</span>
+                    <span id="msg-deliveredBy">${%deliveredBy}</span>
+                    <span id="msg-promotedBy">${%promotedBy}</span>
                 </div>
             </div>
 
